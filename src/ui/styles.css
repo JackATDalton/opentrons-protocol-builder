@@ -1,0 +1,1216 @@
+/*
+ * Opentrons Protocols — interface styles.
+ *
+ * The identity is a lab notebook and an instrument panel: cool graph-paper
+ * ground, deep green-black ink, and colours taken from what is actually on
+ * the bench (P2 buffer blue, culture amber). The deck diagram is the one place
+ * the design raises its voice; everything else stays quiet so the numbers and
+ * warnings read clearly.
+ *
+ * No drop shadows anywhere. Depth comes from hairlines and insets, as it does
+ * on a technical drawing.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&display=swap");
+
+:root {
+  /* Ground and ink */
+  --paper: #edf0ec;
+  --surface: #ffffff;
+  --surface-sunk: #f4f6f3;
+  --ink: #12211c;
+  --ink-2: #44544d;
+  --ink-3: #74837c;
+  --rule: #12211c1f;
+  --rule-strong: #12211c3d;
+
+  /* Bench colours */
+  --buffer: #1f5fa8; /* P2 lysis buffer */
+  --buffer-ink: #16447a;
+  --buffer-wash: #1f5fa814;
+  --culture: #c97a12; /* overnight culture, amber */
+  --culture-wash: #c97a1217;
+  --alert: #a8322a;
+  --alert-wash: #a8322a14;
+  --mint: #2f7d64;
+  --mint-wash: #2f7d6414;
+
+  /* Deck and labware */
+  --slot: #e4e8e3;
+  --slot-free: #fbfcfa;
+  --fixture: #cfd6d1;
+  --tips: #2f7d64;
+  --part: #1f5fa8;
+  --water: #7aa7d4;
+
+  --radius: 3px;
+  --radius-lg: 5px;
+  --rail: 232px;
+
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1714;
+    --surface: #15201c;
+    --surface-sunk: #111a17;
+    --ink: #e7ece9;
+    --ink-2: #a9b6b0;
+    --ink-3: #7c8a84;
+    --rule: #e7ece91f;
+    --rule-strong: #e7ece93d;
+
+    --buffer: #6ea8e8;
+    --buffer-ink: #a3c9f2;
+    --buffer-wash: #6ea8e81f;
+    --culture: #e2a147;
+    --culture-wash: #e2a1471f;
+    --alert: #e78b82;
+    --alert-wash: #e78b821f;
+    --mint: #6cc0a3;
+    --mint-wash: #6cc0a31f;
+
+    --slot: #1a2622;
+    --slot-free: #18231f;
+    --fixture: #2b3a34;
+    --tips: #6cc0a3;
+    --part: #6ea8e8;
+    --water: #3f6c9c;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Graph-paper ground: a 4 mm grid, faint, so the page reads as squared paper
+   without becoming a pattern you notice. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: linear-gradient(to right, var(--rule) 0 1px, transparent 1px 100%),
+    linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px 100%);
+  background-size: 24px 24px;
+  opacity: 0.45;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+h1 {
+  font-size: 17px;
+}
+h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+a {
+  color: var(--buffer-ink);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+code,
+.mono {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+/* ----------------------------------------------------------------- shell */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.rail {
+  border-right: 1px solid var(--rule);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 18px 0 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.brand {
+  padding: 0 18px 16px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 12px;
+}
+
+.brand h1 {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.brand .robot {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3);
+  display: block;
+  margin-top: 3px;
+}
+
+.rail-heading {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  padding: 10px 18px 5px;
+}
+
+.rail button {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-left: 2px solid transparent;
+  font: inherit;
+  color: var(--ink-2);
+  text-align: left;
+  padding: 7px 18px;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  line-height: 1.3;
+}
+
+.rail button .what {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 1px;
+}
+
+.rail button:hover {
+  background: var(--surface-sunk);
+  color: var(--ink);
+}
+
+.rail button[aria-current="true"] {
+  border-left-color: var(--buffer);
+  background: var(--buffer-wash);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.rail button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.rail button:disabled:hover {
+  background: none;
+  color: var(--ink-2);
+}
+
+.rail-foot {
+  margin-top: auto;
+  padding: 12px 18px 0;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 5px;
+  font-size: 12.5px;
+}
+
+.rail-foot a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.rail-foot a:hover {
+  color: var(--buffer-ink);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ main */
+
+.work {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.workbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.workbar h2 {
+  padding: 13px 0;
+  flex: 0 0 auto;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.tabs button {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink-3);
+  padding: 13px 11px 11px;
+  cursor: pointer;
+}
+
+.tabs button:hover {
+  color: var(--ink);
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  font-weight: 500;
+}
+
+.tabs button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sheet {
+  padding: 20px 22px 40px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.plate-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+
+.plate-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.plate-chip button[aria-current="true"] {
+  background: var(--buffer-wash);
+  color: var(--ink);
+}
+
+.csv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* What the open tool does, and what its options mean. */
+.intro {
+  display: grid;
+  gap: 10px;
+  max-width: 78ch;
+}
+
+.intro .lede {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.options-overview summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.options-overview dl {
+  margin: 8px 0 0;
+  display: grid;
+  gap: 5px;
+}
+
+.options-overview dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 13em) 1fr;
+  gap: 12px;
+}
+
+.options-overview dt {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.options-overview dd {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .options-overview dl > div {
+    grid-template-columns: 1fr;
+    gap: 1px;
+  }
+}
+
+/* Settings beside the live deck: the point of the layout is that a change to
+   the left is visible on the right straight away. */
+.with-deck {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+}
+
+.panel > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel > header .spacer {
+  margin-left: auto;
+}
+
+.panel .body {
+  padding: 14px;
+}
+
+.panel .body.tight {
+  padding: 0;
+}
+
+.note {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+.note + .note {
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------- fields */
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
+  gap: 11px 12px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+label {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  font-weight: 450;
+}
+
+label .unit {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+input[type="number"],
+.num input {
+  font-family: var(--mono);
+  font-size: 13.5px;
+}
+
+textarea {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  min-height: 300px;
+  resize: vertical;
+  background: var(--surface-sunk);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--buffer);
+  outline-offset: 1px;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--buffer);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.check input {
+  margin: 0;
+}
+
+/* --------------------------------------------------------------- buttons */
+
+button.primary,
+button.ghost {
+  appearance: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+button.primary {
+  background: var(--buffer);
+  color: #fff;
+  border-color: var(--buffer-ink);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--buffer-ink);
+}
+
+button.ghost {
+  background: var(--surface);
+  color: var(--ink-2);
+  border-color: var(--rule-strong);
+}
+
+button.ghost:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+button.primary:disabled,
+button.ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) button.primary {
+    color: #0b1512;
+  }
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.scroll {
+  overflow: auto;
+  max-height: 60vh;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--rule-strong);
+  z-index: 1;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover td {
+  background: var(--surface-sunk);
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+th.num {
+  font-family: var(--sans);
+}
+
+td.well {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------- flags and notes */
+
+.flag {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.flag.below {
+  background: var(--alert-wash);
+  color: var(--alert);
+}
+
+.flag.mass {
+  background: var(--culture-wash);
+  color: var(--culture);
+}
+
+.flag.ok {
+  background: var(--mint-wash);
+  color: var(--mint);
+}
+
+.msgs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.msgs li {
+  font-size: 13px;
+  padding: 8px 12px 8px 14px;
+  border-left: 2px solid var(--culture);
+  background: var(--culture-wash);
+  color: var(--ink);
+}
+
+.msgs li.err {
+  border-left-color: var(--alert);
+  background: var(--alert-wash);
+}
+
+.banner {
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--alert);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 12px 14px;
+  font-size: 13.5px;
+}
+
+.banner.quiet {
+  border-left-color: var(--buffer);
+}
+
+.banner h3 {
+  margin-bottom: 3px;
+}
+
+/* ------------------------------------------------------------------ deck */
+
+/* The one place the design is loud: a sunk viewport with its own grid, so the
+   deck reads as a physical thing sitting on the bench. */
+.deck-viewport {
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  position: sticky;
+  top: 60px;
+}
+
+.deck-viewport > figure {
+  margin: 0;
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.deck-slot {
+  aspect-ratio: 128 / 86;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--slot-free);
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.deck-slot .slot-id {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+.deck-slot .slot-label {
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.deck-slot.empty {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--rule);
+}
+
+.deck-slot.fixture {
+  background: var(--fixture);
+  border-color: var(--rule-strong);
+}
+
+.deck-slot.fixture .slot-label {
+  color: var(--ink-2);
+}
+
+.deck-slot.tips {
+  background: var(--mint-wash);
+  border-color: var(--tips);
+}
+
+.deck-slot.plate,
+.deck-slot.tuberack {
+  background: var(--buffer-wash);
+  border-color: var(--buffer);
+}
+
+.deck-slot.trash {
+  background: var(--slot);
+}
+
+.deck-slot.spans {
+  border-style: solid;
+}
+
+.deck-slot.movable {
+  cursor: grab;
+}
+
+.deck-slot.picked {
+  outline: 2px solid var(--buffer);
+  outline-offset: 1px;
+}
+
+.deck-slot.drop-ok {
+  cursor: pointer;
+  border-style: solid;
+  border-color: var(--buffer);
+  box-shadow: inset 0 0 0 1px var(--buffer);
+}
+
+.deck-edit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.deck-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.deck-key span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.deck-key i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid var(--rule-strong);
+  display: inline-block;
+}
+
+.deck-tally {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 9px;
+}
+
+.deck-tally b {
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------------ well grids */
+
+.wellgrid {
+  display: inline-grid;
+  gap: 3px;
+  font-family: var(--mono);
+}
+
+.wellgrid .corner,
+.wellgrid .head {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.wellgrid .rowhead {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wellgrid button {
+  appearance: none;
+  aspect-ratio: 1;
+  min-width: 22px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  font-size: 9px;
+  color: transparent;
+}
+
+.wellgrid button:hover {
+  border-color: var(--buffer);
+}
+
+.wellgrid button[aria-pressed="true"] {
+  background: var(--buffer);
+  border-color: var(--buffer-ink);
+}
+
+.grid-actions {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-top: 11px;
+}
+
+.grid-actions .count {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-left: auto;
+}
+
+.rack-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.rack {
+  display: grid;
+  gap: 7px;
+}
+
+/* ------------------------------------------------------------- protocol */
+
+pre.code {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  margin: 0;
+  overflow: auto;
+  max-height: 70vh;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.cmd {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  overflow-x: auto;
+  color: var(--ink-2);
+  white-space: pre;
+}
+
+/* ------------------------------------------------------------ simulator */
+
+.sim {
+  display: grid;
+  gap: 13px;
+}
+
+.sim-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sim-controls input[type="range"] {
+  flex: 1 1 200px;
+  accent-color: var(--buffer);
+}
+
+.sim-controls .counter {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.sim-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 13px;
+  align-items: start;
+}
+
+svg.deck {
+  width: 100%;
+  height: auto;
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+svg.deck .slot-box {
+  fill: var(--slot-free);
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+svg.deck .slot-box.reserved {
+  fill: var(--fixture);
+}
+
+svg.deck .slot-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  fill: var(--ink-3);
+}
+
+svg.deck .lw-label {
+  font-family: var(--sans);
+  font-size: 10px;
+  fill: var(--ink-2);
+}
+
+svg.deck .well {
+  fill: var(--surface);
+  stroke: var(--rule-strong);
+  stroke-width: 0.5;
+}
+
+svg.deck .well.filled {
+  fill: var(--part);
+}
+
+svg.deck .well.used {
+  fill: var(--tips);
+}
+
+svg.deck .well.active {
+  stroke: var(--culture);
+  stroke-width: 1.5;
+}
+
+svg.deck .travel {
+  stroke: var(--culture);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+svg.deck .arm {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+svg.deck .arm-dot {
+  fill: var(--ink);
+  stroke: none;
+}
+
+.steplist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.steplist li {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 12.5px;
+  display: flex;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.steplist li:hover {
+  background: var(--surface-sunk);
+}
+
+.steplist li[aria-current="true"] {
+  background: var(--buffer-wash);
+  font-weight: 500;
+}
+
+.steplist li .ix {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  flex: 0 0 auto;
+  padding-top: 1px;
+}
+
+.steplist li.comment {
+  background: var(--surface-sunk);
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 14px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--rule-strong);
+  display: inline-block;
+}
+
+.why {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  border-left: 2px solid var(--buffer);
+  background: var(--buffer-wash);
+  padding: 8px 11px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* --------------------------------------------------------------- summary */
+
+.tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.tally > div {
+  padding: 10px 16px;
+  border-right: 1px solid var(--rule);
+  min-width: 108px;
+}
+
+.tally > div:last-child {
+  border-right: 0;
+}
+
+.tally dt {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin: 0 0 2px;
+}
+
+.tally dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.tally dd small {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--ink-3);
+  letter-spacing: 0;
+}
+
+/* ------------------------------------------------------------ responsive */
+
+@media (max-width: 1100px) {
+  .with-deck,
+  .sim-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .deck-viewport {
+    position: static;
+  }
+}
+
+@media (max-width: 820px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rail {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .rail-foot {
+    margin-top: 12px;
+  }
+  .workbar {
+    flex-wrap: wrap;
+    gap: 0 14px;
+    padding: 0 16px;
+  }
+  .tabs {
+    margin-left: 0;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .sheet {
+    padding: 16px 16px 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan public source for credentials
+        run: python3 scripts/check-public.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - run: npx tsc -b --force
+      - run: npx oxlint src
+      - run: npx vitest run
+      - run: npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Test public export sanitisation
+        run: python3 -m unittest discover -s tests -p test_public_export.py
+
+      - name: Install Opentrons
+        run: pip install "opentrons==8.6.0"
+
+      - name: Emit fixtures
+        run: npm run fixtures
+
+      # The real test: every generator's output must be runnable Python.
+      - name: Simulate every fixture
+        run: npm run simulate

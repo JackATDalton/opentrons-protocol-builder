@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+.vite/
+
+# Never commit credentials.
+config.local.json
+.env
+.env.*
+
+# TypeScript incremental build state
+*.tsbuildinfo
+
+# Emitted fixtures are build artefacts; CI regenerates them.
+tests/fixtures/
+
+# Python tooling caches
+__pycache__/
+*.pyc
