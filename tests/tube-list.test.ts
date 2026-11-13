@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { STEEL_LAB_FLEX } from "../src/core/deck";
 import { generateTubeNormalisation } from "../src/generators/tube-normalisation";
-import { parsePlateLayout, parseSamples } from "../src/parsers/tube-list";
+import { matchLayoutToTubes, parsePlateLayout, parseSamples } from "../src/parsers/tube-list";
 import { PLATE_LAYOUT_CSV } from "./sample-data";
 import { crc32, makeZip } from "../src/ui/zip";
 
@@ -85,5 +85,27 @@ describe("makeZip", () => {
     const end = zip.length - 22;
     expect(view.getUint32(end, true)).toBe(0x06054b50);
     expect(view.getUint16(end + 10, true)).toBe(2);
+  });
+});
+
+describe("matchLayoutToTubes", () => {
+  const tubes = [
+    { name: "p2d", concentration: 40, volumeUl: 50 },
+    { name: "P1d", concentration: 40, volumeUl: 50 },
+    { name: "C4J", concentration: 60, volumeUl: 3600, masterMix: true },
+  ];
+
+  it("matches names ignoring case and any description after a colon", () => {
+    const m = matchLayoutToTubes({ P2d: "B1", "P1d: PLacI": "A1" }, tubes);
+    // Keyed by the tube list's own spelling, which is what the generator sees.
+    expect(m.wells).toEqual({ p2d: "B1", P1d: "A1" });
+    expect(m.unmatched).toEqual([]);
+  });
+
+  it("reports names with no tube, and master-mix parts, separately", () => {
+    const m = matchLayoutToTubes({ X9: "A1", c4j: "B1" }, tubes);
+    expect(m.unmatched).toEqual(["X9"]);
+    expect(m.masterMix).toEqual(["C4J"]);
+    expect(m.wells).toEqual({});
   });
 });

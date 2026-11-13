@@ -7,6 +7,7 @@
  * nothing at run time can notice.
  */
 import type { TubeSample } from "../generators/tube-normalisation";
+import { basePartName } from "./assembly-layout";
 import { parseCsv } from "./plate-csv";
 
 const MASTER_MIX = /^(mastermix|master mix|master_mix|mm|true|yes|y|1|premix)$/i;
@@ -246,4 +247,33 @@ export function parsePlateLayout(text: string): PlateLayout {
     errors.push("No wells found. Expected a plate grid, or rows of well and part name.");
   }
   return { wells, errors };
+}
+
+export interface LayoutMatch {
+  /** Tube name, exactly as the tube list spells it -> well. */
+  wells: Record<string, string>;
+  /** Layout names with no tube. Those wells stay free; nothing is dropped. */
+  unmatched: string[];
+  /** Layout names that are master-mix tubes, which never go on the plate. */
+  masterMix: string[];
+}
+
+/**
+ * Pair a desired layout with the tube list by part name, ignoring case and
+ * anything after a colon — the rule Golden Gate uses (`basePartName`), so a
+ * layout exported as "P2d" still finds a tube typed "p2d".
+ */
+export function matchLayoutToTubes(layoutWells: Record<string, string>, samples: TubeSample[]): LayoutMatch {
+  const byKey = new Map<string, TubeSample>();
+  for (const s of samples) if (!byKey.has(basePartName(s.name))) byKey.set(basePartName(s.name), s);
+  const wells: Record<string, string> = {};
+  const unmatched: string[] = [];
+  const masterMix: string[] = [];
+  for (const [name, well] of Object.entries(layoutWells)) {
+    const tube = byKey.get(basePartName(name));
+    if (!tube) unmatched.push(name);
+    else if (tube.masterMix) masterMix.push(tube.name);
+    else wells[tube.name] = well;
+  }
+  return { wells, unmatched, masterMix };
 }

@@ -22,7 +22,7 @@ import {
   type TubeNormalisationResult,
   type TubeSample,
 } from "../../generators/tube-normalisation";
-import { parsePlateLayout, parseSamples } from "../../parsers/tube-list";
+import { matchLayoutToTubes, parsePlateLayout, parseSamples } from "../../parsers/tube-list";
 import { SimulationViewer } from "../SimulationViewer";
 import { DeckViewport } from "../DeckViewport";
 import { PlateMap, PlateMapLegend, type MapCell } from "../PlateMap";
@@ -120,6 +120,8 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
     [layoutText],
   );
 
+  const layoutMatch = useMemo(() => matchLayoutToTubes(layout.wells, parsed.samples), [layout.wells, parsed.samples]);
+
   /** The tube list with every position source applied, in priority order. */
   const samples = useMemo((): TubeSample[] => {
     return parsed.samples.map((s) => {
@@ -132,22 +134,24 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
       }
       const well = wellEdits[s.name];
       if (well !== undefined) out.well = well ?? undefined;
-      else if (layout.wells[s.name]) out.well = layout.wells[s.name];
+      else if (layoutMatch.wells[s.name]) out.well = layoutMatch.wells[s.name];
       return out;
     });
-  }, [parsed.samples, positionEdits, wellEdits, layout.wells]);
+  }, [parsed.samples, positionEdits, wellEdits, layoutMatch]);
 
   const layoutWarnings = useMemo(() => {
-    const known = new Map(parsed.samples.map((s) => [s.name, s]));
     const warnings: string[] = [];
-    const missing = Object.keys(layout.wells).filter((n) => !known.has(n));
-    if (missing.length) {
-      warnings.push(`The plate layout names part(s) not in the tube list, so they were ignored: ${missing.join(", ")}.`);
+    if (layoutMatch.unmatched.length) {
+      warnings.push(
+        `The plate layout names part(s) with no tube in the tube list: ${layoutMatch.unmatched.join(", ")}. ` +
+          `Those rows were skipped; every tube in the list is still on the plate.`,
+      );
     }
-    const mm = Object.keys(layout.wells).filter((n) => known.get(n)?.masterMix);
-    if (mm.length) warnings.push(`The plate layout places master-mix part(s), which stay off the plate: ${mm.join(", ")}.`);
+    if (layoutMatch.masterMix.length) {
+      warnings.push(`The plate layout places master-mix part(s), which stay off the plate: ${layoutMatch.masterMix.join(", ")}.`);
+    }
     return warnings;
-  }, [parsed.samples, layout.wells]);
+  }, [layoutMatch]);
 
   const generated = useMemo((): { result?: TubeNormalisationResult; error?: string } => {
     if (parsed.errors.length || !samples.length) return {};
