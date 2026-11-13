@@ -68,7 +68,7 @@ Never name a slot:
 ```ts
 const requests: LabwareRequest[] = [
   { id: "tips", loadName: P1000.tiprack, label: "1000 uL tips", kind: "tips", count: n },
-  { id: "rack", loadName: TUBE_RACK, label: "Tube rack", kind: "tuberack", count: rackCount },
+  { id: "rack", loadName: LABWARE.tubeRack, label: "Tube rack", kind: "tuberack", count: rackCount },
 ];
 const deckLayout = allocateDeck(deck, requests);
 const rackSlots = slotsFor(deckLayout, "rack");
@@ -143,6 +143,12 @@ Add a `src/ui/views/` component and an entry in `TOOLS` in
 [`src/ui/App.tsx`](../src/ui/App.tsx). Keep it a thin wrapper over one
 generator call: compute nothing in the component that the generator already
 returns.
+
+Draw every plate and rack with `PlateMap`, on the Set up tab to choose wells
+and on the Plan tab to show what ends up where. If the run produces a plate,
+pass its layout CSV to `ProtocolTab` as `files` so it downloads with the
+protocol. The full list of shared pieces is in
+[shared-building-blocks.md](shared-building-blocks.md).
 
 ## Verify
 

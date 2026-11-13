@@ -18,6 +18,7 @@ import {
   type ThermocyclerProfile,
 } from "../../generators/goldengate";
 import { DeckViewport } from "../DeckViewport";
+import { PlateMap } from "../PlateMap";
 import {
   CheckField,
   CsvInput,
@@ -33,12 +34,9 @@ import {
 import { ASSEMBLY_LAYOUT_EXAMPLE, REPO_VOLUMES_EXAMPLE, REPOSITORY_PLATE_EXAMPLE } from "../examples";
 import { SimulationViewer } from "../SimulationViewer";
 import type { Tab } from "../tabs";
+import { LABWARE, labwareOptions } from "../../core/labware";
 
-const PLATE_TYPES = [
-  { value: "opentrons_96_wellplate_200ul_pcr_full_skirt", label: "96-well PCR, full skirt" },
-  { value: "corning_96_wellplate_360ul_flat", label: "Corning 96-well flat" },
-  { value: "nest_96_wellplate_200ul_flat", label: "NEST 96-well flat" },
-];
+const PLATE_TYPES = labwareOptions([LABWARE.pcrPlate, LABWARE.corningFlat96, LABWARE.nestFlat96]);
 
 const STATUS_LABEL: Record<string, string> = {
   ok: "OK",
@@ -415,6 +413,23 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
           <tr><td>Lid</td><td>{result.profile.lidTemp} °C</td></tr>
         </tbody></table>
       </Panel>}
+      {result && parsedPlates[selected]?.layout && (
+        <Panel title={`Assembly plate${plates.length > 1 ? ` — ${current.label}` : ""}`}>
+          <PlateMap
+            loadName={plateType}
+            cells={Object.fromEntries(
+              parsedPlates[selected].layout!.rows.map((r) => [
+                r.well,
+                {
+                  label: r.combinationId,
+                  title: `#${r.combinationId}: ${Object.values(r.parts).filter(Boolean).join(" + ")}`,
+                },
+              ]),
+            )}
+          />
+          <p className="note">Each well shows its combination ID; hover for the parts.</p>
+        </Panel>
+      )}
       {result && <Panel title={`Part transfer plan${plates.length > 1 ? ` — ${current.label}` : ""}`} tight><div className="scroll"><table><thead><tr><th>Part type</th><th>Part</th><th>Repository well</th><th>Assembly wells</th></tr></thead><tbody>{result.plan.map((p, i) => <tr key={`${p.column}-${p.part}-${i}`}><td>{p.column}</td><td>{p.part}</td><td className="well">{p.sourceWell}</td><td>{p.destinations.join(", ")}</td></tr>)}</tbody></table></div></Panel>}
     </>}
     {tab === "simulate" && result && <Panel title={`Every move the robot will make${plates.length > 1 ? ` — ${current.label}` : ""}`}><SimulationViewer steps={result.steps} deckLayout={result.deckLayout} /></Panel>}

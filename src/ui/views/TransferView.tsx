@@ -10,15 +10,12 @@ import type { DeckConfig } from "../../core/deck";
 import { MAX_PLATES, generateTransfer, type TransferResult } from "../../generators/transfer";
 import { SimulationViewer } from "../SimulationViewer";
 import { DeckViewport } from "../DeckViewport";
-import { Messages, NumberField, Panel, ProtocolTab, SelectField, Tally, WellGrid } from "../common";
+import { Messages, NumberField, Panel, ProtocolTab, SelectField, Tally } from "../common";
+import { PlateMap } from "../PlateMap";
 import type { Tab } from "../tabs";
+import { LABWARE, labwareOptions } from "../../core/labware";
 
-const PLATE_TYPES = [
-  { value: "opentrons_96_wellplate_200ul_pcr_full_skirt", label: "96-well PCR plate, full skirt" },
-  { value: "corning_96_wellplate_360ul_flat", label: "Corning 96-well flat" },
-  { value: "nest_96_wellplate_200ul_flat", label: "NEST 96-well flat" },
-  { value: "jd_24_tuberack_1.5ml", label: "24 × 1.5 mL tube rack" },
-];
+const PLATE_TYPES = labwareOptions([LABWARE.pcrPlate, LABWARE.corningFlat96, LABWARE.nestFlat96, LABWARE.tubeRack]);
 
 interface PlateState {
   plateType: string;
@@ -103,10 +100,10 @@ export function TransferView({ deck, tab, author, slackUserId, notify }: Props) 
                     options={PLATE_TYPES}
                   />
                 </div>
-                <WellGrid
+                <PlateMap
                   loadName={p.plateType}
-                  selected={p.selected}
-                  onChange={(selected) => update(i, { selected })}
+                  selection={p.selected}
+                  onSelectionChange={(selected) => update(i, { selected })}
                 />
               </Panel>
             ))}
@@ -149,6 +146,26 @@ export function TransferView({ deck, tab, author, slackUserId, notify }: Props) 
               },
             ]}
           />
+
+          <Panel title="Tube racks after the run">
+            <div className="rack-stack">
+              {[...new Set(result.plan.map((p) => p.rack))].map((rack) => (
+                <PlateMap
+                  key={rack}
+                  loadName={LABWARE.tubeRack}
+                  label={`Rack ${rack}`}
+                  cells={Object.fromEntries(
+                    result.plan
+                      .filter((p) => p.rack === rack)
+                      .map((p) => [
+                        p.tube,
+                        { label: p.sourceWell, sub: `plate ${p.plate}`, title: `from plate ${p.plate} ${p.sourceWell}` },
+                      ]),
+                  )}
+                />
+              ))}
+            </div>
+          </Panel>
 
           <Panel title="Label the tubes like this" tight>
             <div className="scroll">

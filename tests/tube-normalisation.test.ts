@@ -219,3 +219,77 @@ describe("generateTubeNormalisation", () => {
     expect(r.source).toContain("def notify(message)");
   });
 });
+
+describe("tube positions and plate layout", () => {
+  const samples: TubeSample[] = [
+    { name: "P1", concentration: 90, volumeUl: 50 },
+    { name: "P2", concentration: 60, volumeUl: 50 },
+    { name: "T1", concentration: 31, volumeUl: 100 },
+  ];
+
+  it("keeps a tube where it was put, and fills the rest into the free positions", () => {
+    const r = generateTubeNormalisation(
+      base({ samples: [{ ...samples[0], rack: 1, tube: "A1" }, samples[1], { ...samples[2], rack: 2, tube: "C4" }] }),
+    );
+    const at = Object.fromEntries(r.plan.map((p) => [p.name, `${p.rack}:${p.tube}`]));
+    expect(at).toEqual({ P1: "1:A1", P2: "1:B1", T1: "2:C4" });
+    expect(r.rackCount).toBe(2);
+    expect(r.plan.find((p) => p.name === "P2")?.positionSet).toBe(false);
+    expect(r.plan.find((p) => p.name === "T1")?.positionSet).toBe(true);
+    // The emitted protocol reads tubes from where they actually are.
+    expect(r.source).toContain(`"name": 'T1', "rack": 2, "tube": 'C4'`);
+    expect(r.source).toContain("racks[2] = protocol.load_labware");
+  });
+
+  it("rejects two tubes in one rack position", () => {
+    expect(() =>
+      generateTubeNormalisation(
+        base({ samples: [{ ...samples[0], rack: 1, tube: "A1" }, { ...samples[1], rack: 1, tube: "a01" }] }),
+      ),
+    ).toThrow(/claimed by both P1 and P2/);
+  });
+
+  it("rejects a position that is not in the rack", () => {
+    expect(() => generateTubeNormalisation(base({ samples: [{ ...samples[0], rack: 1, tube: "E1" }] }))).toThrow(
+      /not a position/,
+    );
+  });
+
+  it("puts a part in the well asked for and fills the rest in rack order", () => {
+    const r = generateTubeNormalisation(base({ samples: [samples[0], { ...samples[1], well: "A1" }, samples[2]] }));
+    const well = Object.fromEntries(r.plan.map((p) => [p.name, p.well]));
+    expect(well).toEqual({ P2: "A1", P1: "B1", T1: "C1" });
+    expect(r.plan.map((p) => p.name)).toEqual(["P2", "P1", "T1"]);
+    expect(r.source).toMatch(/'A1': \{"name": 'P2', "rack": 1, "tube": 'B1'/);
+  });
+
+  it("rejects two parts in one well", () => {
+    expect(() =>
+      generateTubeNormalisation(base({ samples: [{ ...samples[0], well: "H12" }, { ...samples[1], well: "H12" }] })),
+    ).toThrow(/assigned to both/);
+  });
+
+  it("fills the plate column by column whatever order the wells were given in", () => {
+    const r = generateTubeNormalisation(
+      base({ samples: [{ ...samples[0], well: "A2" }, { ...samples[1], well: "H1" }, { ...samples[2], well: "A1" }] }),
+    );
+    const parts = r.steps.filter((s) => s.kind === "dispense" && s.labwareId === "dest" && !s.nonContact);
+    expect(parts.map((s) => s.well)).toEqual(["A1", "H1", "A2"]);
+  });
+
+  it("writes the plate layout CSV, and the full version lists every well", () => {
+    const r = generateTubeNormalisation(
+      base({ samples: [...samples, { name: "C4J", concentration: 60, volumeUl: 3600, masterMix: true }] }),
+    );
+    const lines = r.layoutCsv.trim().split("\n");
+    expect(lines[0]).toMatch(/^well,name,/);
+    expect(lines.slice(1, 4).map((l) => l.split(",").slice(0, 5).join(","))).toEqual([
+      "A1,P1,30,1,A1",
+      "B1,P2,30,1,B1",
+      "C1,T1,30,1,C1",
+    ]);
+    expect(lines.at(-1)).toMatch(/^,C4J,.*master_mix$/);
+    expect(r.layoutCsvFull.trim().split("\n")).toHaveLength(1 + 96 + 1);
+    expect(r.source).toContain("# Output plate layout");
+  });
+});

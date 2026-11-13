@@ -21,6 +21,12 @@ If one fits, drive it (via the web app or `npx tsx`) and stop. If one nearly
 fits, extend it rather than writing a new script. Write a new protocol only
 when nothing is close.
 
+## Before writing anything new
+
+**[`docs/shared-building-blocks.md`](docs/shared-building-blocks.md)** lists
+everything already shared: labware, pipettes, well order, placement, parsers,
+the plate map, downloads. A generator should contain only the experiment.
+
 ## The two documents that matter
 
 1. **[`docs/protocol-invariants.md`](docs/protocol-invariants.md)** — seven
@@ -53,6 +59,8 @@ them; do not retype them.
 - **Dispense 35 mm above open tubes and spin columns**, or tips catch on lids.
 - **Pair well lists only from `src/core/wells.ts`**, and write the pairing
   into the emitted protocol by name.
+- **Draw every plate or rack with `PlateMap`** (`src/ui/PlateMap.tsx`), so 24-
+  and 96-well labware look and behave the same everywhere.
 - **Never hardcode a deck slot.** Declare `LabwareRequest`s; `allocateDeck`
   assigns them.
 - **Never use liquid-level detection.** It under-reads, and simulation cannot
@@ -105,9 +113,11 @@ simulation is necessary and not sufficient.
 
 ## Things that will bite you
 
-- Opentrons writes `jd_24_tuberack_1.5ml` with a dot. TypeScript object keys
-  can't hold one unquoted, so there is an alias in `wells.ts` and `steps.ts`.
-  Keep both in step.
+- Opentrons writes `jd_24_tuberack_1.5ml` with a dot. Use `LABWARE.tubeRack`
+  from `src/core/labware.ts`, which also accepts the `_1_5ml` spelling. That
+  file is the only labware registry: add new labware there, and
+  `tests/labware.test.tsx` checks our own entries against
+  `labware/definitions/`.
 - The Flex deck is **4 rows (A–D) × 3 columns (1–3)** — 12 slots, not 16.
 - `jd_24_tuberack_1.5ml.json` declares `totalLiquidVolume: 1.5`, millilitres
   where the schema wants microlitres, so it claims a 1.5 µL tube. Nothing

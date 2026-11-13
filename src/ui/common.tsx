@@ -5,10 +5,12 @@
  * legible; anything here that drew attention to itself would be competing with
  * the deck diagram, which is the one thing that should.
  */
-import { Fragment, useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 
-import { parseWell, shapeFor, type PlateShape } from "../core/wells";
+import { parseWell } from "../core/wells";
 import { downloadCsv, type CsvExample } from "./examples";
+import { downloadText, downloadZip } from "./download";
+import type { ZipEntry } from "./zip";
 
 /* ------------------------------------------------------------------ panel */
 
@@ -177,119 +179,69 @@ export function Tally({ items }: { items: { label: string; value: ReactNode }[] 
 /* --------------------------------------------------------------- download */
 
 export function downloadPython(source: string, filename: string): void {
-  const blob = new Blob([source], { type: "text/x-python" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename.endsWith(".py") ? filename : `${filename}.py`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadText(source, filename.endsWith(".py") ? filename : `${filename}.py`, "text/x-python");
 }
 
-export function ProtocolTab({ source, filename }: { source: string; filename: string }) {
+/**
+ * The protocol, ready to download. With `files`, the download is a zip of the
+ * protocol and those files (e.g. the plate layout it produces), so the two
+ * travel together and cannot be mismatched later.
+ */
+export function ProtocolTab({ source, filename, files }: { source: string; filename: string; files?: ZipEntry[] }) {
+  const stem = filename.replace(/\.py$/, "");
+  const py = `${stem}.py`;
   return (
     <>
       <Panel
-        title={filename}
+        title={py}
         actions={
-          <button className="primary" onClick={() => downloadPython(source, filename)}>
-            Download protocol
-          </button>
+          files?.length ? (
+            <>
+              <button className="ghost" onClick={() => downloadPython(source, py)}>
+                Protocol only
+              </button>
+              <button className="primary" onClick={() => downloadZip([{ name: py, content: source }, ...files], `${stem}.zip`)}>
+                Download protocol + {files.length === 1 ? files[0].name : `${files.length} files`} (.zip)
+              </button>
+            </>
+          ) : (
+            <button className="primary" onClick={() => downloadPython(source, py)}>
+              Download protocol
+            </button>
+          )
         }
       >
         <p className="note">
           Simulate it before you run it. A clean simulation means the protocol will run, not that
           it is correct — check it against the invariants too.
         </p>
+        {!!files?.length && (
+          <p className="note">
+            The zip holds {py} and {files.map((f) => f.name).join(", ")}.
+          </p>
+        )}
         <div className="cmd">
-          opentrons_simulate {filename} --custom-labware-path ./labware/definitions
+          opentrons_simulate {py} --custom-labware-path ./labware/definitions
         </div>
       </Panel>
+      {files?.map((f) => (
+        <Panel
+          key={f.name}
+          title={f.name}
+          tight
+          actions={
+            <button className="ghost" onClick={() => downloadText(f.content, f.name, "text/csv")}>
+              Download
+            </button>
+          }
+        >
+          <pre className="code">{f.content}</pre>
+        </Panel>
+      ))}
       <Panel title="Protocol source" tight>
         <pre className="code">{source}</pre>
       </Panel>
     </>
-  );
-}
-
-/* -------------------------------------------------------------- well grid */
-
-/**
- * A clickable plate or rack. Drag to paint a range; the mode is set by the
- * first well you touch, so dragging from a selected well erases.
- */
-export function WellGrid({
-  loadName,
-  selected,
-  onChange,
-  label,
-}: {
-  loadName: string;
-  selected: Set<string>;
-  onChange: (next: Set<string>) => void;
-  label?: string;
-}) {
-  const shape: PlateShape = shapeFor(loadName);
-
-  const toggle = (well: string) => {
-    const next = new Set(selected);
-    if (next.has(well)) next.delete(well);
-    else next.add(well);
-    onChange(next);
-  };
-
-  const fill = (wells: string[]) => onChange(new Set(wells));
-
-  const all = shape.rows.flatMap((r) => shape.columns.map((c) => `${r}${c}`));
-
-  return (
-    <div className="rack">
-      {label && <h3>{label}</h3>}
-      <div
-        className="wellgrid"
-        style={{ gridTemplateColumns: `auto repeat(${shape.columns.length}, minmax(0, 1fr))` }}
-        role="group"
-        aria-label={label ?? "Well selection"}
-      >
-        <span className="corner" />
-        {shape.columns.map((c) => (
-          <span className="head" key={`h${c}`}>
-            {c}
-          </span>
-        ))}
-        {shape.rows.map((r) => (
-          <Fragment key={r}>
-            <span className="rowhead">{r}</span>
-            {shape.columns.map((c) => {
-              const well = `${r}${c}`;
-              return (
-                <button
-                  key={well}
-                  type="button"
-                  aria-pressed={selected.has(well)}
-                  aria-label={well}
-                  title={well}
-                  onClick={() => toggle(well)}
-                >
-                  {well}
-                </button>
-              );
-            })}
-          </Fragment>
-        ))}
-      </div>
-      <div className="grid-actions">
-        <button className="ghost" onClick={() => fill(all)}>
-          Select all
-        </button>
-        <button className="ghost" onClick={() => fill([])} disabled={!selected.size}>
-          Clear
-        </button>
-        <span className="count">
-          {selected.size} of {all.length}
-        </span>
-      </div>
-    </div>
   );
 }
 

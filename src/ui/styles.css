@@ -437,6 +437,10 @@ code,
 
 .panel > header .spacer {
   margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
 }
 
 .panel .body {
@@ -852,58 +856,171 @@ td.well {
   color: var(--ink-2);
 }
 
-/* ------------------------------------------------------------ well grids */
+/* ------------------------------------------------------------ plate maps */
 
-.wellgrid {
+/*
+ * Every plate, tube rack and tip rack in the forms and plans (PlateMap.tsx).
+ * One look for all of them: round wells, the same states and colours. Only
+ * the well size changes, larger for sparse labware so a 24-tube rack is not
+ * drawn smaller than a 96-well plate.
+ */
+
+.platemap {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.platemap h3 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.platemap-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.platemap-grid {
+  --well: 56px;
   display: inline-grid;
-  gap: 3px;
+  gap: 4px;
   font-family: var(--mono);
 }
 
-.wellgrid .corner,
-.wellgrid .head {
-  font-size: 10.5px;
-  color: var(--ink-3);
-  text-align: center;
-  line-height: 1.6;
+.platemap-grid.dense {
+  --well: 40px;
+  gap: 3px;
 }
 
-.wellgrid .rowhead {
+.platemap-grid .head,
+.platemap-grid .rowhead {
   font-size: 10.5px;
   color: var(--ink-3);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 3px;
 }
 
-.wellgrid button {
+.platemap-grid .well {
   appearance: none;
+  box-sizing: border-box;
+  width: var(--well);
   aspect-ratio: 1;
-  min-width: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
   border: 1px solid var(--rule-strong);
   border-radius: 50%;
   background: var(--surface);
-  cursor: pointer;
-  padding: 0;
+  color: var(--ink);
   font: inherit;
-  font-size: 9px;
-  color: transparent;
+  font-size: 10px;
+  line-height: 1.15;
+  overflow: hidden;
 }
 
-.wellgrid button:hover {
+.platemap-grid.dense .well {
+  font-size: 9px;
+}
+
+.platemap-grid button.well {
+  cursor: pointer;
+}
+
+.platemap-grid button.well:hover {
   border-color: var(--buffer);
 }
 
-.wellgrid button[aria-pressed="true"] {
+.platemap-grid .well .name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.platemap-grid .well .sub {
+  color: var(--ink-3);
+  font-size: 0.85em;
+}
+
+.platemap-grid .well.empty {
+  background: var(--surface-sunk);
+}
+
+.platemap-grid .well.filled {
+  background: var(--buffer-wash);
+  border-color: var(--buffer);
+}
+
+.platemap-grid .well.auto {
+  background: var(--surface);
+  border: 1px dashed var(--buffer);
+}
+
+.platemap-grid .well.picked:not(.filled):not(.auto) {
   background: var(--buffer);
   border-color: var(--buffer-ink);
+  color: #fff;
+}
+
+.platemap-grid .well.picked.filled,
+.platemap-grid .well.picked.auto {
+  box-shadow: inset 0 0 0 2px var(--buffer);
+}
+
+.platemap-grid .well.mass {
+  background: var(--culture-wash);
+  border-color: var(--culture);
+}
+
+.platemap-grid .well.below {
+  background: var(--alert-wash);
+  border-color: var(--alert);
+}
+
+.platemap-grid .well.active {
+  outline: 2px solid var(--culture);
+  outline-offset: 1px;
+}
+
+.platemap-legend {
+  margin-top: 4px;
+}
+
+.platemap-legend .key {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid var(--buffer);
+  background: var(--buffer-wash);
+}
+
+.platemap-legend .key.auto {
+  border-style: dashed;
+  background: var(--surface);
+}
+
+.platemap-legend .key.mass {
+  border-color: var(--culture);
+  background: var(--culture-wash);
+}
+
+.platemap-legend .key.below {
+  border-color: var(--alert);
+  background: var(--alert-wash);
 }
 
 .grid-actions {
   display: flex;
   gap: 7px;
   align-items: center;
-  margin-top: 11px;
 }
 
 .grid-actions .count {
@@ -912,15 +1029,35 @@ td.well {
   margin-left: auto;
 }
 
+/* Several racks or plates side by side, wrapping on narrow screens. */
 .rack-stack {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
+  min-width: 0;
 }
 
-.rack {
-  display: grid;
-  gap: 7px;
+/* Part picker under an editable map. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.chips button {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+.chips button[aria-pressed="true"] {
+  outline: 2px solid var(--culture);
+}
+
+.chips button .at {
+  color: var(--ink-3);
+  margin-left: 5px;
 }
 
 /* ------------------------------------------------------------- protocol */
@@ -1213,4 +1350,9 @@ svg.deck .arm-dot {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* The optional layout upload is a secondary input; keep its box short. */
+.layout-upload textarea {
+  min-height: 110px;
 }

@@ -22,10 +22,11 @@ import {
 } from "../core/deck";
 import { finalise, indent, preamble, py, runFunction, type NotifyConfig } from "../core/emit";
 import { assertWellsExist, shapeFor, sortRowMajor } from "../core/wells";
+import { P50, tipRacksFor } from "../core/pipetting";
+import { round1, round2 } from "../core/numbers";
 
-const TIPRACK = "opentrons_flex_96_tiprack_50ul";
-const PIPETTE = "flex_1channel_50";
-const TIPS_PER_RACK = 96;
+const TIPRACK = P50.tiprack;
+const PIPETTE = P50.name;
 
 export interface NormalisationWell {
   /** Well on the source plate, e.g. "A1". */
@@ -124,12 +125,6 @@ export function planWell(well: NormalisationWell, finalVolumeUl: number, deadVol
   };
 }
 
-function round1(n: number): number {
-  return Math.round(n * 10) / 10;
-}
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
 
 export function generateNormalisation(options: NormalisationOptions): NormalisationResult {
   const {
@@ -180,7 +175,7 @@ export function generateNormalisation(options: NormalisationOptions): Normalisat
   }
 
   // One tip per plasmid transfer, plus one shared tip for the whole water pass.
-  const tipRacks = Math.max(1, Math.ceil((plan.length + 1) / TIPS_PER_RACK));
+  const tipRacks = tipRacksFor(plan.length + 1);
 
   const requests: LabwareRequest[] = [
     { id: "source", loadName: plateType, label: "Source Plate", kind: "plate" },
@@ -215,7 +210,7 @@ water = water_rack.wells_by_name()[${py(waterWell)}]
 ${tipLoads}
 protocol.load_trash_bin(${py(trashSlot(deck))})
 
-pipette = protocol.load_instrument(${py(PIPETTE)}, mount="left", tip_racks=[${tipList}])
+pipette = protocol.load_instrument(${py(PIPETTE)}, mount=${py(P50.mount)}, tip_racks=[${tipList}])
 
 notify(f"Normalisation started - {len(PLAN)} well(s)")
 

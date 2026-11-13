@@ -20,11 +20,12 @@ import {
   type LabwareRequest,
 } from "../core/deck";
 import { finalise, indent, preamble, py, runFunction, type NotifyConfig } from "../core/emit";
-import { ASPIRATE_BOTTOM_MM, P1000, TIPS_PER_RACK } from "../core/pipetting";
+import { ASPIRATE_BOTTOM_MM, P1000, TIPS_PER_RACK, tipRacksFor } from "../core/pipetting";
 import { StepRecorder, type ProtocolStep } from "../core/steps";
 import { rowMajor, shapeFor, sortRowMajor, wellCount } from "../core/wells";
+import { LABWARE } from "../core/labware";
 
-const TUBE_RACK = "jd_24_tuberack_1.5ml";
+const TUBE_RACK = LABWARE.tubeRack;
 export const MAX_PLATES = 3;
 
 export interface SourcePlate {
@@ -130,7 +131,7 @@ export function generateTransfer(options: TransferOptions): TransferResult {
       loadName: P1000.tiprack,
       label: "1000 uL tips",
       kind: "tips",
-      count: Math.max(1, Math.ceil(tipsUsed / TIPS_PER_RACK)),
+      count: tipRacksFor(tipsUsed),
     },
     { id: "rack", loadName: tubeRackLoadName, label: "Tube rack", kind: "tuberack", count: rackCount },
   ];

@@ -10,11 +10,13 @@
  * run justified it.
  */
 
+import { LABWARE } from "./labware";
+
 /* ---------------------------------------------------------------- pipettes */
 
 export const P50 = {
   name: "flex_1channel_50",
-  tiprack: "opentrons_flex_96_tiprack_50ul",
+  tiprack: LABWARE.tips50,
   mount: "left",
   minUl: 1,
   maxUl: 50,
@@ -22,13 +24,18 @@ export const P50 = {
 
 export const P1000 = {
   name: "flex_1channel_1000",
-  tiprack: "opentrons_flex_96_tiprack_1000ul",
+  tiprack: LABWARE.tips1000,
   mount: "right",
   minUl: 5,
   maxUl: 1000,
 } as const;
 
 export const TIPS_PER_RACK = 96;
+
+/** Tip racks to put on deck for this many tips — always at least one. */
+export function tipRacksFor(tips: number): number {
+  return Math.max(1, Math.ceil(tips / TIPS_PER_RACK));
+}
 
 /* ----------------------------------------------------------- small volumes */
 

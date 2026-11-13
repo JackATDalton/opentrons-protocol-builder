@@ -12,43 +12,15 @@
  * well *name* over matching by index wherever the labware shapes allow it.
  */
 
-export interface PlateShape {
-  rows: string[];
-  columns: number[];
-}
+import { geometryFor, type PlateShape } from "./labware";
 
-export const SHAPE_96: PlateShape = {
-  rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
-  columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-};
+// Shapes live with the rest of the labware data; re-exported so existing
+// imports keep working.
+export { SHAPE_6, SHAPE_24, SHAPE_96, type PlateShape } from "./labware";
 
-export const SHAPE_24: PlateShape = {
-  rows: ["A", "B", "C", "D"],
-  columns: [1, 2, 3, 4, 5, 6],
-};
-
-export const SHAPE_6: PlateShape = {
-  rows: ["A", "B"],
-  columns: [1, 2, 3],
-};
-
-/** Well-grid shape per Opentrons loadName. */
-const SHAPE_BY_LOADNAME: Record<string, PlateShape> = {
-  opentrons_96_wellplate_200ul_pcr_full_skirt: SHAPE_96,
-  corning_96_wellplate_360ul_flat: SHAPE_96,
-  nest_96_wellplate_200ul_flat: SHAPE_96,
-  opentrons_flex_96_tiprack_1000ul: SHAPE_96,
-  opentrons_flex_96_tiprack_50ul: SHAPE_96,
-  nest_24_wellplate_10_4ml: SHAPE_24,
-  "nest_24_wellplate_10.4ml": SHAPE_24,
-  jd_24_tuberack_1_5ml: SHAPE_24,
-  "jd_24_tuberack_1.5ml": SHAPE_24,
-  jdvacuum_24_tuberack_500ul: SHAPE_24,
-  jd_6_falconrack_50ml: SHAPE_6,
-};
-
+/** Well-grid shape per Opentrons loadName, from the labware registry. */
 export function shapeFor(loadName: string): PlateShape {
-  return SHAPE_BY_LOADNAME[loadName] ?? SHAPE_96;
+  return geometryFor(loadName).shape;
 }
 
 export function wellCount(shape: PlateShape): number {

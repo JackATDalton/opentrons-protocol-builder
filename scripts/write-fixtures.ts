@@ -68,9 +68,11 @@ write(
   generateTubeNormalisation({
     deck: STEEL_LAB_FLEX,
     samples: [
-      { name: "P10d", concentration: 49.6, volumeUl: 50 },
-      { name: "P18m", concentration: 45, volumeUl: 50 },
-      { name: "P1d", concentration: 37.2, volumeUl: 50 },
+      // Explicit rack positions and plate wells, as set in the app's maps or
+      // the CSV, alongside tubes left for the generator to place.
+      { name: "P10d", concentration: 49.6, volumeUl: 50, rack: 2, tube: "D6", well: "H12" },
+      { name: "P18m", concentration: 45, volumeUl: 50, well: "A1" },
+      { name: "P1d", concentration: 37.2, volumeUl: 50, rack: 1, tube: "A1" },
       { name: "T1m", concentration: 18.3, volumeUl: 100 },
       { name: "U4d", concentration: 30.8, volumeUl: 100 },
       { name: "U17m", concentration: 39, volumeUl: 200 },

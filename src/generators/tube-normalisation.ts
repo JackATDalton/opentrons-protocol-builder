@@ -25,6 +25,14 @@
  *    tube with a tip that had already touched the destination — invariant 1
  *    again. Parts only slightly above target need nearly the full well volume,
  *    so this case is normal here, not an edge case.
+ *
+ * Where each tube sits and which well it fills are both inputs. A tube with a
+ * rack position keeps it — that is the rack the user loaded, set in the app or
+ * in the CSV — and anything unplaced takes the first free position. A part with
+ * a plate well keeps it; the rest take the next free well in rack order, so a
+ * run with no layout lays the plate out exactly as the racks read. Two tubes on
+ * one position, or two parts on one well, are rejected rather than resolved:
+ * the generated script would silently overwrite one with the other.
  */
 import {
   allocateDeck,
@@ -37,16 +45,22 @@ import {
 } from "../core/deck";
 import { finalise, indent, preamble, py, runFunction, type NotifyConfig } from "../core/emit";
 import { StepRecorder, type ProtocolStep } from "../core/steps";
-import { columnMajor, shapeFor, wellCount } from "../core/wells";
+import { columnMajor, shapeFor, wellCount, type PlateShape } from "../core/wells";
+import { LABWARE } from "../core/labware";
+import { P50, P1000, tipRacksFor } from "../core/pipetting";
+import { round1, round2 } from "../core/numbers";
+import { assignPlateWells, assignTubePositions, csvCell, plateMapComment } from "../core/placement";
 
-const TUBE_RACK = "jd_24_tuberack_1.5ml";
-const DEST_PLATE = "opentrons_96_wellplate_200ul_pcr_full_skirt";
-const SMALL = { name: "flex_1channel_50", tiprack: "opentrons_flex_96_tiprack_50ul", mount: "left", min: 1, max: 50 } as const;
-const LARGE = { name: "flex_1channel_1000", tiprack: "opentrons_flex_96_tiprack_1000ul", mount: "right", min: 5, max: 1000 } as const;
-const TIPS_PER_RACK = 96;
+const TUBE_RACK = LABWARE.tubeRack;
+const DEST_PLATE = LABWARE.pcrPlate;
+const SMALL = P50;
+const LARGE = P1000;
 
 /** The lab treats 150 uL as the working maximum on a 200 uL PCR plate. */
 export const DEFAULT_MAX_WELL_UL = 150;
+
+// Re-exported for the view; the rule lives with the placement helpers.
+export { MAX_TUBE_RACKS } from "../core/placement";
 
 export interface TubeSample {
   /** Part name, e.g. "P10d". Becomes the well label. */
@@ -61,6 +75,14 @@ export interface TubeSample {
    * reported so the exclusion is visible rather than silent.
    */
   masterMix?: boolean;
+  /**
+   * 1-based rack and position the tube sits in. Set both or neither; a tube
+   * without them takes the first free position, in list order.
+   */
+  rack?: number;
+  tube?: string;
+  /** Destination well. Unset means the next free well, in rack order. */
+  well?: string;
 }
 
 export interface TubeNormalisationOptions {
@@ -104,6 +126,10 @@ export interface TubePlanEntry {
   massLimited: boolean;
   /** Stock is at or below target, so dilution cannot reach it. */
   belowTarget: boolean;
+  /** Rack position came from the input rather than being filled in. */
+  positionSet: boolean;
+  /** Plate well came from the input rather than being filled in. */
+  wellSet: boolean;
 }
 
 export interface TubeNormalisationResult {
@@ -117,14 +143,13 @@ export interface TubeNormalisationResult {
   steps: ProtocolStep[];
   warnings: string[];
   tipsUsed: { small: number; large: number };
+  /** Output plate layout, one row per filled well — downloads with the protocol. */
+  layoutCsv: string;
+  /** The same, with every empty well listed too. */
+  layoutCsvFull: string;
+  rackCount: number;
 }
 
-function round1(n: number): number {
-  return Math.round(n * 10) / 10;
-}
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
 
 /**
  * Part/water split for one tube.
@@ -170,7 +195,36 @@ export function planTube(
 
 /** Which pipette can deliver this volume in one go. */
 function pipetteFor(volumeUl: number): typeof SMALL | typeof LARGE {
-  return volumeUl <= SMALL.max ? SMALL : LARGE;
+  return volumeUl <= SMALL.maxUl ? SMALL : LARGE;
+}
+
+/**
+ * The output plate as a CSV, in plate order. `well,name` lead so it drops
+ * straight into the plate readers elsewhere in this repo (and back into this
+ * tool as a desired layout); master-mix parts are listed with no well so the
+ * file shows what is missing on purpose.
+ */
+export function tubeLayoutCsv(
+  plan: TubePlanEntry[],
+  excluded: TubeSample[],
+  destShape: PlateShape,
+  includeEmpty = false,
+): string {
+  const byWell = new Map(plan.map((p) => [p.well, p]));
+  const lines = ["well,name,concentration_ngul,rack,tube,part_ul,water_ul,final_volume_ul,stock_ngul,flag"];
+  for (const well of columnMajor(destShape)) {
+    const p = byWell.get(well);
+    if (!p) {
+      if (includeEmpty) lines.push(`${well},,,,,,,,,empty`);
+      continue;
+    }
+    const flag = p.belowTarget ? "below_target" : p.massLimited ? "mass_limited" : "";
+    lines.push(
+      [well, csvCell(p.name), p.achievedConcentration, p.rack, p.tube, p.partUl, p.waterUl, p.finalVolumeUl, p.concentration, flag].join(","),
+    );
+  }
+  for (const s of excluded) lines.push(`,${csvCell(s.name)},${s.concentration},,,,,,${s.concentration},master_mix`);
+  return lines.join("\n") + "\n";
 }
 
 export function generateTubeNormalisation(options: TubeNormalisationOptions): TubeNormalisationResult {
@@ -217,8 +271,6 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
 
   const rackShape = shapeFor(tubeRackLoadName);
   const destShape = shapeFor(destPlateType);
-  const tubesPerRack = wellCount(rackShape);
-  const rackCount = Math.ceil(plated.length / tubesPerRack);
 
   if (plated.length > wellCount(destShape)) {
     throw new Error(
@@ -226,28 +278,49 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
     );
   }
 
-  // Invariant 3: both orderings come from wells.ts, and the pairing they
-  // produce is then written down by name rather than re-derived anywhere else.
+  // Invariant 3: every ordering comes from wells.ts, and the pairing they
+  // produce is written down by name rather than re-derived anywhere else.
+  const positions = assignTubePositions(plated, rackShape);
   const tubeOrder = columnMajor(rackShape);
-  const destOrder = columnMajor(destShape);
+  const rankOf = (name: string) => {
+    const p = positions.get(name)!;
+    return p.rack * 1000 + tubeOrder.indexOf(p.tube);
+  };
+  const inRackOrder = [...plated].sort((a, b) => rankOf(a.name) - rankOf(b.name));
+  const wells = assignPlateWells(inRackOrder, destShape);
+  const rackCount = Math.max(...[...positions.values()].map((p) => p.rack));
 
+  const destOrder = columnMajor(destShape);
   const warnings: string[] = [];
-  const plan: TubePlanEntry[] = plated.map((sample, i) => {
-    const split = planTube(sample, target, finalVolumeUl, tubeDeadVolumeUl);
-    return {
-      rack: Math.floor(i / tubesPerRack) + 1,
-      tube: tubeOrder[i % tubesPerRack],
-      well: destOrder[i],
-      name: sample.name,
-      concentration: sample.concentration,
-      partUl: split.partUl,
-      waterUl: split.waterUl,
-      finalVolumeUl: split.total,
-      achievedConcentration: split.achieved,
-      massLimited: split.massLimited,
-      belowTarget: split.belowTarget,
-    };
-  });
+  const plan: TubePlanEntry[] = inRackOrder
+    .map((sample): TubePlanEntry => {
+      const split = planTube(sample, target, finalVolumeUl, tubeDeadVolumeUl);
+      const pos = positions.get(sample.name)!;
+      const dest = wells.get(sample.name)!;
+      return {
+        rack: pos.rack,
+        tube: pos.tube,
+        well: dest.well,
+        name: sample.name,
+        concentration: sample.concentration,
+        partUl: split.partUl,
+        waterUl: split.waterUl,
+        finalVolumeUl: split.total,
+        achievedConcentration: split.achieved,
+        massLimited: split.massLimited,
+        belowTarget: split.belowTarget,
+        positionSet: pos.set,
+        wellSet: dest.set,
+      };
+    })
+    // Plate order, so both passes fill column by column.
+    .sort((a, b) => destOrder.indexOf(a.well) - destOrder.indexOf(b.well));
+
+  for (let rack = 1; rack < rackCount; rack++) {
+    if (!plan.some((p) => p.rack === rack)) {
+      warnings.push(`Rack ${rack} is empty but rack ${rackCount} is used — it still takes a deck slot.`);
+    }
+  }
 
   for (const p of plan) {
     if (p.belowTarget) {
@@ -262,9 +335,9 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
           `to hold ${target} ng/uL.`,
       );
     }
-    if (p.partUl > 0 && p.partUl < SMALL.min) {
+    if (p.partUl > 0 && p.partUl < SMALL.minUl) {
       warnings.push(
-        `${p.name} needs only ${p.partUl} uL of part, below the ${SMALL.min} uL minimum of the ` +
+        `${p.name} needs only ${p.partUl} uL of part, below the ${SMALL.minUl} uL minimum of the ` +
           `${SMALL.name}. Dilute the tube by hand first, or raise the final volume.`,
       );
     }
@@ -309,7 +382,7 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
       loadName: SMALL.tiprack,
       label: "50 uL tips",
       kind: "tips",
-      count: Math.max(1, Math.ceil(smallTips / TIPS_PER_RACK)),
+      count: tipRacksFor(smallTips),
     });
   }
   if (usesLarge) {
@@ -318,7 +391,7 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
       loadName: LARGE.tiprack,
       label: "1000 uL tips",
       kind: "tips",
-      count: Math.max(1, Math.ceil(largeTips / TIPS_PER_RACK)),
+      count: tipRacksFor(largeTips),
     });
   }
 
@@ -464,7 +537,7 @@ def pipette_for(volume):
     aspirate would dip a tip that has already touched the destination back
     into the shared stock tube.
     """
-    if volume <= ${SMALL.max} and small is not None:
+    if volume <= ${SMALL.maxUl} and small is not None:
         return small
     if large is not None:
         return large
@@ -520,7 +593,8 @@ for well_name, entry in PLAN.items():
 notify("Normalisation complete:\\n\`\`\`" + "\\n".join(rows) + "\`\`\`")
 `.trim();
 
-  const loadingComment = plan
+  const loadingComment = [...plan]
+    .sort((a, b) => a.rack - b.rack || tubeOrder.indexOf(a.tube) - tubeOrder.indexOf(b.tube))
     .map((p) => `#   rack ${p.rack} ${p.tube.padEnd(3)} ${p.name.padEnd(6)} -> plate ${p.well}`)
     .join("\n");
 
@@ -551,6 +625,9 @@ TUBE_DEAD_VOLUME_UL = ${tubeDeadVolumeUl}
 ${loadingComment}
 ${excludedComment}
 
+# Output plate layout (also downloaded as a CSV beside this file):
+${plateMapComment(new Map(plan.map((p) => [p.well, p.name])), destShape)}
+
 # Pre-computed from the concentrations and volumes declared in the app. Nothing
 # is measured at run time.
 PLAN = {
@@ -568,5 +645,8 @@ ${planLiteral}
     steps,
     warnings,
     tipsUsed: { small: smallTips, large: largeTips },
+    layoutCsv: tubeLayoutCsv(plan, excluded, destShape),
+    layoutCsvFull: tubeLayoutCsv(plan, excluded, destShape, true),
+    rackCount,
   };
 }

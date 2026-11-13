@@ -11,10 +11,12 @@ import { useMemo, useState } from "react";
 import type { DeckConfig } from "../../core/deck";
 import { generateNormalisation, type NormalisationResult } from "../../generators/normalisation";
 import { DeckViewport } from "../DeckViewport";
+import { PlateMap, PlateMapLegend } from "../PlateMap";
 import { CsvInput, Messages, NumberField, Panel, ProtocolTab, SelectField, Tally, TextField } from "../common";
 import { occupiedWells, parsePlateCsv } from "../../parsers/plate-csv";
 import type { Tab } from "../tabs";
 import { PLATE_CONTENTS_EXAMPLE } from "../examples";
+import { LABWARE, labwareOptions } from "../../core/labware";
 
 const SEED = `Location,Name
 A1,C1J
@@ -44,7 +46,7 @@ export function PlateNormalisationView({ deck, tab, author, slackUserId, notify 
   const [finalVolume, setFinalVolume] = useState(100);
   const [sourceVolume, setSourceVolume] = useState(45);
   const [deadVolume, setDeadVolume] = useState(2);
-  const [plateType, setPlateType] = useState("opentrons_96_wellplate_200ul_pcr_full_skirt");
+  const [plateType, setPlateType] = useState<string>(LABWARE.pcrPlate);
   const [waterWell, setWaterWell] = useState("A1");
 
   const parsed = useMemo(() => {
@@ -74,7 +76,7 @@ export function PlateNormalisationView({ deck, tab, author, slackUserId, notify 
             sourceVolumeUl: sourceVolume,
           })),
           plateType,
-          waterLabware: "jd_6_falconrack_50ml",
+          waterLabware: LABWARE.falconRack,
           waterWell,
           finalVolumeUl: finalVolume,
           deadVolumeUl: deadVolume,
@@ -117,10 +119,7 @@ export function PlateNormalisationView({ deck, tab, author, slackUserId, notify 
                   label="Plate"
                   value={plateType}
                   onChange={setPlateType}
-                  options={[
-                    { value: "opentrons_96_wellplate_200ul_pcr_full_skirt", label: "96-well PCR, full skirt" },
-                    { value: "corning_96_wellplate_360ul_flat", label: "Corning 96-well flat" },
-                  ]}
+                  options={labwareOptions([LABWARE.pcrPlate, LABWARE.corningFlat96])}
                 />
                 <TextField label="Water well" value={waterWell} onChange={setWaterWell} upper />
               </div>
@@ -153,6 +152,24 @@ export function PlateNormalisationView({ deck, tab, author, slackUserId, notify 
               },
             ]}
           />
+
+          <Panel title="Plate after normalisation">
+            <PlateMap
+              loadName={plateType}
+              cells={Object.fromEntries(
+                result.plan.map((p) => [
+                  p.well,
+                  {
+                    label: p.name,
+                    sub: String(p.achievedConcentrationUl),
+                    flag: p.short ? ("mass" as const) : undefined,
+                    title: `${p.name}, ${p.plasmidUl} µL + ${p.waterUl} µL water = ${p.finalVolumeUl} µL at ${p.achievedConcentrationUl} ng/µL`,
+                  },
+                ]),
+              )}
+            />
+            <PlateMapLegend flags />
+          </Panel>
 
           <Panel title="Volumes" tight>
             <div className="scroll">

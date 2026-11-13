@@ -5,6 +5,7 @@
  * generator) in tests/examples.test.ts, so an example cannot drift out of step
  * with the format it demonstrates.
  */
+import { downloadText } from "./download";
 
 export interface CsvExample {
   filename: string;
@@ -21,6 +22,19 @@ U2d, 46, 100
 C1J, 114, 60
 T1m, 18.3, 100
 V35m, 120, 800, mastermix
+`,
+};
+
+/** A desired output plate for tube normalisation: well, part. Optional. */
+export const TUBE_PLATE_LAYOUT_EXAMPLE: CsvExample = {
+  filename: "plate-layout-example.csv",
+  content: `well,name
+A1,P1d
+B1,P2d
+C1,U1d
+D1,U2d
+A2,C1J
+B2,T1m
 `,
 };
 
@@ -77,11 +91,5 @@ A6,T1m,30,60,18.3,
 };
 
 export function downloadCsv(example: CsvExample): void {
-  const blob = new Blob([example.content], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = example.filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadText(example.content, example.filename, "text/csv");
 }

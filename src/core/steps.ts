@@ -14,6 +14,7 @@
  */
 
 import type { DeckSlotAssignment } from "./deck";
+import { geometryFor, LABWARE, type LabwareGeometry, type Point } from "./labware";
 
 export type StepKind =
   | "pick_up_tip"
@@ -105,97 +106,17 @@ export class StepRecorder {
 
 /* ------------------------------------------------------------------ geometry */
 
-export interface Point {
-  x: number;
-  y: number;
-}
+export type { Point } from "./labware";
 
-/** Grid layout of wells within one piece of labware, in mm from its corner. */
-export interface LabwareLayout {
-  rows: string[];
-  columns: number[];
-  /** Centre of the A1 well. */
-  origin: Point;
-  /** Centre-to-centre spacing. `y` counts downward from A toward H. */
-  spacing: Point;
-  /** Footprint, for drawing the labware outline. */
-  size: Point;
-  /** Well diameter, for drawing. */
-  wellDiameter: number;
-}
-
-const ROWS_8 = ["A", "B", "C", "D", "E", "F", "G", "H"];
-const ROWS_4 = ["A", "B", "C", "D"];
-const COLS = (n: number): number[] => Array.from({ length: n }, (_, i) => i + 1);
-
-const SBS_FOOTPRINT: Point = { x: 127.76, y: 85.48 };
-
-/**
- * Well geometry per loadName. Standard Opentrons labware is transcribed from
- * the published definitions; `jd_*` entries come from the definitions shipped
- * in `labware/definitions/`. Anything unknown falls back to a 96-well plate,
- * which draws a sensible grid rather than throwing inside a render.
- */
-export const LABWARE_LAYOUTS: Record<string, LabwareLayout> = {
-  opentrons_96_wellplate_200ul_pcr_full_skirt: {
-    rows: ROWS_8,
-    columns: COLS(12),
-    origin: { x: 14.38, y: 11.24 },
-    spacing: { x: 9, y: 9 },
-    size: SBS_FOOTPRINT,
-    wellDiameter: 5.34,
-  },
-  opentrons_flex_96_tiprack_1000ul: {
-    rows: ROWS_8,
-    columns: COLS(12),
-    origin: { x: 14.38, y: 11.24 },
-    spacing: { x: 9, y: 9 },
-    size: SBS_FOOTPRINT,
-    wellDiameter: 5.6,
-  },
-  opentrons_flex_96_tiprack_50ul: {
-    rows: ROWS_8,
-    columns: COLS(12),
-    origin: { x: 14.38, y: 11.24 },
-    spacing: { x: 9, y: 9 },
-    size: SBS_FOOTPRINT,
-    wellDiameter: 5,
-  },
-  jd_24_tuberack_1_5ml: {
-    rows: ROWS_4,
-    columns: COLS(6),
-    origin: { x: 9, y: 9 },
-    spacing: { x: 21.8, y: 22.33 },
-    size: { x: 127, y: 85 },
-    wellDiameter: 9.8,
-  },
-  jdvacuum_24_tuberack_500ul: {
-    rows: ROWS_4,
-    columns: COLS(6),
-    origin: { x: 10, y: 10 },
-    spacing: { x: 21.4, y: 21.67 },
-    size: { x: 127, y: 85 },
-    wellDiameter: 8,
-  },
-  jd_6_falconrack_50ml: {
-    rows: ["A", "B"],
-    columns: COLS(3),
-    origin: { x: 25, y: 25 },
-    spacing: { x: 38.5, y: 35 },
-    size: { x: 127, y: 85 },
-    wellDiameter: 27.5,
-  },
-};
-
-/** Opentrons writes this loadName with a dot; TS keys can't, so alias it. */
-LABWARE_LAYOUTS["jd_24_tuberack_1.5ml"] = LABWARE_LAYOUTS.jd_24_tuberack_1_5ml;
+/** Drawing geometry for a load name. See `labware.ts`, the one registry. */
+export type LabwareLayout = LabwareGeometry;
+export { LABWARE_GEOMETRY as LABWARE_LAYOUTS } from "./labware";
 
 export function layoutFor(loadName: string | null | undefined): LabwareLayout {
-  if (!loadName) return LABWARE_LAYOUTS.opentrons_96_wellplate_200ul_pcr_full_skirt;
-  return (
-    LABWARE_LAYOUTS[loadName] ?? LABWARE_LAYOUTS.opentrons_96_wellplate_200ul_pcr_full_skirt
-  );
+  return geometryFor(loadName);
 }
+
+const SBS_FOOTPRINT: Point = { x: 127.76, y: 85.48 };
 
 /**
  * Front-left corner of a Flex deck slot, in mm.
@@ -222,8 +143,8 @@ export function wellPosition(slot: string, loadName: string | null | undefined, 
   const layout = layoutFor(loadName);
   const match = /^([A-Z]+)(\d+)$/.exec(well.trim().toUpperCase());
   if (!match) throw new Error(`"${well}" is not a valid well name.`);
-  const rowIndex = layout.rows.indexOf(match[1]);
-  const colIndex = layout.columns.indexOf(Number(match[2]));
+  const rowIndex = layout.shape.rows.indexOf(match[1]);
+  const colIndex = layout.shape.columns.indexOf(Number(match[2]));
   const origin = slotOrigin(slot);
   // Fall back to the labware centre for a well the layout doesn't know, so an
   // unfamiliar loadName degrades to a plausible drawing instead of an error.
@@ -256,7 +177,7 @@ export interface DeckState {
   from?: { slot: string; labwareId?: string; well?: string };
 }
 
-const TIP_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const TIP_ROWS = geometryFor(LABWARE.tips50).shape.rows;
 
 /**
  * Replay the first `upTo` steps to get the deck's state at that point.

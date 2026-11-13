@@ -16,7 +16,7 @@ import {
   RETURN_BLOWOUT_BOTTOM_MM,
   SMALL_BLOWOUT_BOTTOM_MM,
   SLOW_DISPENSE_RATE,
-  TIPS_PER_RACK,
+  tipRacksFor,
   ASPIRATE_BOTTOM_MM,
   reverseBatchSize,
   reverseExcessUl,
@@ -25,9 +25,10 @@ import { StepRecorder, type ProtocolStep } from "../core/steps";
 import { assertWellsExist, shapeFor, sortRowMajor } from "../core/wells";
 import { basePartName, buildPartIndex, type AssemblyLayout } from "../parsers/assembly-layout";
 import type { PlateMap } from "../parsers/plate-csv";
+import { LABWARE } from "../core/labware";
 
-const MM_RACK = "jd_24_tuberack_1.5ml";
-const SMALL_TIPRACK = "opentrons_flex_96_tiprack_50ul";
+const MM_RACK = LABWARE.tubeRack;
+const SMALL_TIPRACK = LABWARE.tips50;
 
 /**
  * The lab's standard Golden Gate deck, as the original builder laid it out:
@@ -195,7 +196,7 @@ export function generateGoldenGate(options: GoldenGateOptions): GoldenGateResult
   const partTips = plan.length;
   // One tip covers the whole master-mix pass; see the step comments below.
   const tipsUsed = partTips + 1;
-  const tipCount = Math.max(1, Math.ceil(tipsUsed / TIPS_PER_RACK));
+  const tipCount = tipRacksFor(tipsUsed);
 
   const requests: LabwareRequest[] = [
     { id: "repository", loadName: plateType, label: "Repository plate", kind: "plate", preferredSlots: GOLDENGATE_DEFAULT_SLOTS.repository },

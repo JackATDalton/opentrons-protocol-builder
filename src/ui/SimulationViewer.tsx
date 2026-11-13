@@ -189,8 +189,8 @@ export function SimulationViewer({ steps, deckLayout }: Props) {
               </text>
               {!isReserved &&
                 a.loadName &&
-                layout.rows.flatMap((row, ri) =>
-                  layout.columns.map((col, ci) => {
+                layout.shape.rows.flatMap((row, ri) =>
+                  layout.shape.columns.map((col, ci) => {
                     const well = `${row}${col}`;
                     const key = `${a.id}:${well}`;
                     const volume = state.volumes.get(key) ?? 0;

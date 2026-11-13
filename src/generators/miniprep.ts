@@ -43,10 +43,11 @@ import {
 } from "../core/pipetting";
 import { StepRecorder, type ProtocolStep } from "../core/steps";
 import { shapeFor, sortColumnMajor, wellCount } from "../core/wells";
+import { LABWARE } from "../core/labware";
 
-const TUBE_RACK = "jd_24_tuberack_1.5ml";
-const MANIFOLD = "jdvacuum_24_tuberack_500ul";
-const BUFFERS = "jd_6_falconrack_50ml";
+const TUBE_RACK = LABWARE.tubeRack;
+const MANIFOLD = LABWARE.vacuumRack;
+const BUFFERS = LABWARE.falconRack;
 
 /** Deck capacity: two racks plus two manifolds alongside tips and buffers. */
 export const MAX_RACKS = 2;

@@ -15,13 +15,15 @@ import {
   type MiniprepResult,
   type SampleSource,
 } from "../../generators/miniprep";
-import { sortColumnMajor } from "../../core/wells";
+import { columnMajor, shapeFor, sortColumnMajor } from "../../core/wells";
 import { SimulationViewer } from "../SimulationViewer";
 import { DeckViewport } from "../DeckViewport";
-import { CheckField, Messages, NumberField, Panel, ProtocolTab, SelectField, Tally, WellGrid } from "../common";
+import { CheckField, Messages, NumberField, Panel, ProtocolTab, SelectField, Tally } from "../common";
+import { PlateMap } from "../PlateMap";
 import type { Tab } from "../tabs";
+import { LABWARE } from "../../core/labware";
 
-const RACK = "jd_24_tuberack_1.5ml";
+const RACK = LABWARE.tubeRack;
 
 interface Props {
   deck: DeckConfig;
@@ -33,9 +35,7 @@ interface Props {
 
 /** Column-major, which is the order the protocol processes tubes in. */
 function firstN(n: number): Set<string> {
-  const wells: string[] = [];
-  for (const c of [1, 2, 3, 4, 5, 6]) for (const r of ["A", "B", "C", "D"]) wells.push(`${r}${c}`);
-  return new Set(wells.slice(0, n));
+  return new Set(columnMajor(shapeFor(RACK)).slice(0, n));
 }
 
 export function MiniprepView({ deck, tab, author, slackUserId, notify }: Props) {
@@ -155,11 +155,11 @@ export function MiniprepView({ deck, tab, author, slackUserId, notify }: Props) 
               </p>
               <div className="rack-stack" style={{ marginTop: 12 }}>
                 {racks.map((r, i) => (
-                  <WellGrid
+                  <PlateMap
                     key={i}
                     loadName={RACK}
-                    selected={r}
-                    onChange={(next) => setRack(i, next)}
+                    selection={r}
+                    onSelectionChange={(next) => setRack(i, next)}
                     label={racks.length > 1 ? `Rack ${i + 1}` : undefined}
                   />
                 ))}
@@ -286,6 +286,23 @@ export function MiniprepView({ deck, tab, author, slackUserId, notify }: Props) 
               },
             ]}
           />
+
+          <Panel title="Sample racks">
+            <div className="rack-stack">
+              {[...new Set(result.samplePositions.map((p) => p.rack))].map((rack) => (
+                <PlateMap
+                  key={rack}
+                  loadName={RACK}
+                  label={`Rack ${rack}`}
+                  cells={Object.fromEntries(
+                    result.samplePositions
+                      .filter((p) => p.rack === rack)
+                      .map((p) => [p.tube, { label: p.name, title: p.name }]),
+                  )}
+                />
+              ))}
+            </div>
+          </Panel>
 
           <Panel title="Load the buffers rack like this" tight>
             <table>
