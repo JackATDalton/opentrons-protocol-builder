@@ -19,12 +19,12 @@ import { PLATE_CONTENTS_EXAMPLE } from "../examples";
 import { LABWARE, labwareOptions } from "../../core/labware";
 
 const SEED = `Location,Name
-A1,C1J
-A2,P1d
-A3,P2d
-B1,U1d
-B2,U2d
-B3,T1m
+A1,A1
+A2,A2
+A3,A3
+B1,B1
+B2,B2
+B3,B3
 A1,114
 A2,62.5
 A3,67.8

@@ -19,6 +19,43 @@ SCRIPTS = {'scripts/new-protocol.ts', 'scripts/write-fixtures.ts', 'scripts/simu
 HOOK = re.compile(r'https://hooks[.]slack[.]com/services/[^\s"\'<>]+')
 
 
+SEED = re.compile(r'const SEED = `([^`]*)`;')
+RACK_ORDER = [f'{row}{col}' for col in range(1, 7) for row in 'ABCD']  # column-major, as the rack fills
+
+
+def _seed(text, path, rewrite):
+    """Rewrite a view's SEED sample list; fail loudly if the view no longer has one."""
+    match = SEED.search(text)
+    if not match:
+        raise ValueError(f'{path}: no SEED sample list found; update the exporter before publishing.')
+    return text[:match.start(1)] + rewrite(match.group(1)) + text[match.end(1):]
+
+
+def anonymise_tube_seed(seed):
+    """Lab part names -> rack positions. Up to one rack, so names stay unique; master-mix rows dropped."""
+    header = [line for line in seed.splitlines() if line.startswith('#')]
+    rows = [line for line in seed.splitlines() if line.strip() and not line.startswith('#')]
+    rows = [r for r in rows if 'mastermix' not in r.lower()][:len(RACK_ORDER)]
+    renamed = [', '.join([RACK_ORDER[i], *[c.strip() for c in r.split(',')[1:3]]]) for i, r in enumerate(rows)]
+    return '\n'.join(header + renamed)
+
+
+def anonymise_plate_seed(seed):
+    """Lab part names in the name block -> the well's own name; concentrations kept."""
+    out = []
+    for i, line in enumerate(seed.splitlines()):
+        well, _, value = line.partition(',')
+        is_name = i > 0 and value.strip() and not re.fullmatch(r'[-+]?\d*\.?\d+', value.strip())
+        out.append(f'{well},{well.strip()}' if is_name else line)
+    return '\n'.join(out)
+
+
+PUBLIC_SEEDS = {
+    'src/ui/views/TubeNormalisationView.tsx': anonymise_tube_seed,
+    'src/ui/views/PlateNormalisationView.tsx': anonymise_plate_seed,
+}
+
+
 def git(*args, cwd=None):
     return subprocess.check_output(['git', *args], cwd=cwd or ROOT, text=True).strip()
 
@@ -54,6 +91,10 @@ def export(destination):
             continue
         text = HOOK.sub('', text)
         text = text.replace('https://github.com/JackATDalton/opentrons-protocol-builder', f'https://github.com/{PUBLIC}')
+        if path in PUBLIC_SEEDS:
+            # The lab's own parts and readings stay private; the public app
+            # opens with the same example numbers, named by position.
+            text = _seed(text, path, PUBLIC_SEEDS[path])
         if path == 'src/config/lab.ts':
             start = text.index('import type')
             text = '/** Public defaults: notifications are opt-in and configured in the app. */\n' + text[start:]

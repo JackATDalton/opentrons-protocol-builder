@@ -77,3 +77,29 @@ class PublicExportTests(unittest.TestCase):
         self.commit(self.source)
         exporter.export(self.dest)
         self.assertFalse((self.dest / 'src/config/lab.ts').exists())
+
+
+class PublicSeedTest(unittest.TestCase):
+    """The lab's sample names never ship as the public app's defaults."""
+
+    def test_real_views_export_with_position_names_only(self):
+        for path, rewrite in exporter.PUBLIC_SEEDS.items():
+            seed = exporter.SEED.search(exporter._seed((REPO / path).read_text(), path, rewrite)).group(1)
+            names = [line.split(',')[0].strip() for line in seed.splitlines()[1:] if line.strip() and not line.startswith('#')]
+            self.assertTrue(names, path)
+            for name in names:
+                self.assertRegex(name, r'^[A-H]\d{1,2}$', f'{path}: "{name}" is not a position')
+
+    def test_tube_names_stay_unique_within_one_rack(self):
+        seed = '# part\n' + '\n'.join(f'P{i}, 40, 50' for i in range(30)) + '\nC4J, 60, 3600, mastermix'
+        names = [line.split(',')[0] for line in exporter.anonymise_tube_seed(seed).splitlines()[1:]]
+        self.assertEqual(names, exporter.RACK_ORDER)
+        self.assertNotIn('C4J', exporter.anonymise_tube_seed(seed))
+
+    def test_plate_keeps_concentrations(self):
+        out = exporter.anonymise_plate_seed('Location,Name\nA1,P1d\nA1,114')
+        self.assertEqual(out, 'Location,Name\nA1,A1\nA1,114')
+
+    def test_missing_seed_stops_the_export(self):
+        with self.assertRaisesRegex(ValueError, 'no SEED'):
+            exporter._seed('const OTHER = 1;', 'view.tsx', exporter.anonymise_tube_seed)
