@@ -15,7 +15,7 @@ TOP = {'AGENTS.md', 'CLAUDE.md', 'CONTRIBUTING.md', 'LICENSE', 'README.md',
        'tsconfig.json', 'tsconfig.app.json', 'tsconfig.node.json', 'vite.config.ts'}
 PREFIXES = ('src/', 'tests/', 'docs/', 'labware/', 'protocols/reference/')
 SCRIPTS = {'scripts/new-protocol.ts', 'scripts/write-fixtures.ts', 'scripts/simulate.sh',
-           'scripts/check-public.py', 'scripts/export-public.py'}
+           'scripts/check-public.py', 'scripts/export-public.py', 'scripts/publish-pages.py'}
 HOOK = re.compile(r'https://hooks[.]slack[.]com/services/[^\s"\'<>]+')
 
 

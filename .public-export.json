@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "fe2066bb0a56c277280ecb8a1590ee62fd39bf17",
+  "sourceRevision": "e153fd7818c8b58743997bb1af9aed5e382b0b15",
   "files": [
     ".github/workflows/ci.yml",
     ".github/workflows/deploy.yml",
@@ -38,6 +38,7 @@
     "scripts/check-public.py",
     "scripts/export-public.py",
     "scripts/new-protocol.ts",
+    "scripts/publish-pages.py",
     "scripts/simulate.sh",
     "scripts/write-fixtures.ts",
     "src/config/lab.ts",

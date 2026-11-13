@@ -39,6 +39,7 @@ python3 scripts/check-public.py
 git add .
 git commit -m "Sync validated lab changes"
 git push origin main
+python3 scripts/publish-pages.py
 ```
 
 The exporter requires a clean public checkout with the expected personal
@@ -63,5 +64,15 @@ It is embedded in downloaded Python so the robot can post stage notifications.
 Those downloaded protocols contain the user's credential and should be shared
 accordingly. Blank webhook means no Slack network requests.
 
-GitHub Pages is configured for Actions deployments. Pushes to public `main`
-run checks, build the static app with the repository base path, and deploy it.
+Pages currently serves the prebuilt `gh-pages` branch. The personal account's
+GitHub Actions jobs were blocked by a billing lock during initial publication.
+`scripts/publish-pages.py` checks the public source and built assets, builds
+locally and pushes only static files to `gh-pages`. It preserves branch history
+and refuses to run against the private origin. Run `npm ci` in the public
+checkout before first use. GitHub then performs its managed Pages build.
+
+The Actions deployment workflow is also ready. Once the account billing lock
+is resolved, choose **GitHub Actions** as the Pages source in repository
+Settings → Pages (or set `build_type=workflow` via the API). Pushes to public
+`main` will then check, build and deploy automatically, without the local
+publish step. CI jobs will also resume after the billing issue is resolved.
