@@ -11,6 +11,7 @@ import {
 } from "../core/deck";
 import { finalise, preamble, py, runFunction, type NotifyConfig } from "../core/emit";
 import {
+  CONTACT_DISPENSE_BOTTOM_MM,
   DISPENSE_X_OFFSET_MM,
   P50,
   RETURN_BLOWOUT_BOTTOM_MM,
@@ -342,7 +343,7 @@ ${onboard ? `    tc_mod.open_lid()
         excess = max(5, round(dispensed * 0.15, 1))
         pipette.aspirate(dispensed + excess, enzyme_tube.bottom(${ASPIRATE_BOTTOM_MM}))
         for entry in batch:
-            pipette.dispense(ENZYME_VOLUME_PER_WELL_UL, assembly_plate[entry["well"]].bottom(0.5).move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)), rate=${SLOW_DISPENSE_RATE})
+            pipette.dispense(ENZYME_VOLUME_PER_WELL_UL, assembly_plate[entry["well"]].bottom(${CONTACT_DISPENSE_BOTTOM_MM}).move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)), rate=${SLOW_DISPENSE_RATE})
         pipette.blow_out(enzyme_tube.bottom(${RETURN_BLOWOUT_BOTTOM_MM}))
     pipette.drop_tip()
     for col_idx, column in enumerate(ACTIVE_COLUMNS):
@@ -362,7 +363,7 @@ ${onboard ? `    tc_mod.open_lid()
                     for dest in batch:
                         pipette.pick_up_tip()
                         pipette.aspirate(TRANSFER_VOLUME_UL, repo_plate[source_well].bottom(${ASPIRATE_BOTTOM_MM}))
-                        pipette.dispense(TRANSFER_VOLUME_UL, assembly_plate[dest].bottom(0.5).move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)), rate=${SLOW_DISPENSE_RATE})
+                        pipette.dispense(TRANSFER_VOLUME_UL, assembly_plate[dest].bottom(${CONTACT_DISPENSE_BOTTOM_MM}).move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)), rate=${SLOW_DISPENSE_RATE})
                         pipette.blow_out(assembly_plate[dest].bottom(${SMALL_BLOWOUT_BOTTOM_MM}))
                         pipette.drop_tip()
                 else:
@@ -374,7 +375,7 @@ ${onboard ? `    tc_mod.open_lid()
                     # 2026-11-12: exact batch total, then final-well blow-out (bench validation pending).
                     pipette.aspirate(dispensed, repo_plate[source_well].bottom(${ASPIRATE_BOTTOM_MM}))
                     for dest in batch:
-                        pipette.dispense(TRANSFER_VOLUME_UL, assembly_plate[dest].bottom(0.5).move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)), rate=${SLOW_DISPENSE_RATE})
+                        pipette.dispense(TRANSFER_VOLUME_UL, assembly_plate[dest].bottom(${CONTACT_DISPENSE_BOTTOM_MM}).move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)), rate=${SLOW_DISPENSE_RATE})
                     pipette.blow_out(assembly_plate[batch[-1]].bottom(${SMALL_BLOWOUT_BOTTOM_MM}))
                     pipette.drop_tip()
 ${onboard ? `    notify("Assembly complete. Seal the plate before starting thermocycling.")

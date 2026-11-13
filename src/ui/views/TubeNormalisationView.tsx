@@ -40,6 +40,7 @@ import {
 import type { Tab } from "../tabs";
 import { TUBE_LIST_EXAMPLE, TUBE_PLATE_LAYOUT_EXAMPLE } from "../examples";
 import { LABWARE, labwareOptions } from "../../core/labware";
+import { TUBE_ASPIRATE_BOTTOM_MM } from "../../core/pipetting";
 
 // Kept for existing imports; the parser lives with the other CSV parsers.
 export { parseSamples };
@@ -103,6 +104,7 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
   const [finalVolume, setFinalVolume] = useState(100);
   const [deadVolume, setDeadVolume] = useState(3);
   const [mixCycles, setMixCycles] = useState(3);
+  const [tubeAspirate, setTubeAspirate] = useState(TUBE_ASPIRATE_BOTTOM_MM);
   const [waterLabware, setWaterLabware] = useState<string>(LABWARE.falconRack);
   const [waterWell, setWaterWell] = useState("A1");
   const [showFlagged, setShowFlagged] = useState(false);
@@ -166,6 +168,7 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
           waterWell,
           tubeDeadVolumeUl: deadVolume,
           mixCycles,
+          tubeAspirateBottomMm: tubeAspirate,
           tubeRackLoadName: TUBE_RACK,
           destPlateType: DEST_PLATE,
           author,
@@ -176,7 +179,7 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-  }, [deck, parsed, samples, target, finalVolume, waterLabware, waterWell, deadVolume, mixCycles, author, slackUserId, notify]);
+  }, [deck, parsed, samples, target, finalVolume, waterLabware, waterWell, deadVolume, mixCycles, tubeAspirate, author, slackUserId, notify]);
 
   const result = generated.result;
   const toPlate = parsed.samples.filter((s) => !s.masterMix).length;
@@ -503,6 +506,15 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
                   value={deadVolume}
                   onChange={setDeadVolume}
                   min={0}
+                />
+                <NumberField
+                  label="Aspirate above tube bottom"
+                  unit="mm"
+                  value={tubeAspirate}
+                  onChange={setTubeAspirate}
+                  min={0}
+                  max={5}
+                  step={0.1}
                 />
                 <NumberField label="Mix cycles" value={mixCycles} onChange={setMixCycles} min={0} max={10} />
                 <SelectField

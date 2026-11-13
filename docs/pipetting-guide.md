@@ -171,7 +171,8 @@ speed is the knob to try next.
 | Where | Use | Why |
 |---|---|---|
 | Aspirate from a tube or well | `.bottom(1)` | At default height the last wells of a pass got air. |
-| Aspirate from a plate, if you see overpressure | `.bottom(2)` | Raising the tip cleared repeated overpressure errors. |
+| Aspirate the whole of a 1.5 mL tube | `.bottom(0.5)` (`TUBE_ASPIRATE_BOTTOM_MM`) | At `.bottom(2)` tube normalisation often aspirated short, and 1 mm is still high in a conical tube. Not 0: a tip flat on the floor can seal. |
+| Aspirate from a plate, if you see overpressure | `.bottom(2)` | Raising the tip cleared repeated overpressure errors. Plates only. |
 | Aspirate from a 50 mL Falcon | `.bottom(3)` | Clears the conical taper. |
 | Blow out after a small-volume dispense | `.bottom(1)` | At the top the liquid does not leave the tip. |
 | Return reverse-pipetting excess | `.bottom(3)` | Same reason. |
@@ -179,7 +180,7 @@ speed is the knob to try next.
 | Non-contact dispense into a plate well | `.top(-2)` | Just inside the rim; keeps the tip clean. |
 
 *(Pipetting Test, 14 Oct 2025; Testing GG Part Pipetting, 15 Oct 2025;
-miniprep generator, Oct 2026)*
+miniprep generator, Oct 2026; tube normalisation, Jack, 13 Nov 2026)*
 
 ---
 

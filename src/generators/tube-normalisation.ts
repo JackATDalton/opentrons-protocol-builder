@@ -47,7 +47,20 @@ import { finalise, indent, preamble, py, runFunction, type NotifyConfig } from "
 import { StepRecorder, type ProtocolStep } from "../core/steps";
 import { columnMajor, shapeFor, wellCount, type PlateShape } from "../core/wells";
 import { LABWARE } from "../core/labware";
-import { P50, P1000, tipRacksFor } from "../core/pipetting";
+import {
+  ASPIRATE_BOTTOM_MM,
+  ASPIRATE_BOTTOM_PLATE_SAFE_MM,
+  TUBE_ASPIRATE_BOTTOM_MM,
+  CONTACT_DISPENSE_BOTTOM_MM,
+  DISPENSE_X_OFFSET_MM,
+  FALCON_ASPIRATE_BOTTOM_MM,
+  NON_CONTACT_DISPENSE_TOP_MM,
+  P50,
+  P1000,
+  SLOW_DISPENSE_RATE,
+  SMALL_BLOWOUT_BOTTOM_MM,
+  tipRacksFor,
+} from "../core/pipetting";
 import { round1, round2 } from "../core/numbers";
 import { assignPlateWells, assignTubePositions, csvCell, plateMapComment } from "../core/placement";
 
@@ -98,6 +111,8 @@ export interface TubeNormalisationOptions {
   tubeDeadVolumeUl?: number;
   /** Destination well capacity to validate against, uL. */
   maxWellVolumeUl?: number;
+  /** Height above the tube bottom to aspirate parts from, mm. */
+  tubeAspirateBottomMm?: number;
   /** Mix cycles after the part lands in the water. 0 disables mixing. */
   mixCycles?: number;
   tubeRackLoadName?: string;
@@ -238,6 +253,7 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
     tubeDeadVolumeUl = 3,
     maxWellVolumeUl = DEFAULT_MAX_WELL_UL,
     mixCycles = 3,
+    tubeAspirateBottomMm = TUBE_ASPIRATE_BOTTOM_MM,
     tubeRackLoadName = TUBE_RACK,
     destPlateType = DEST_PLATE,
     protocolName = "Source Plate Normalisation from Tubes",
@@ -248,6 +264,9 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
   if (!samples.length) throw new Error("Add at least one tube.");
   if (target <= 0) throw new Error("Target concentration must be greater than zero.");
   if (finalVolumeUl <= 0) throw new Error("Final volume must be greater than zero.");
+  if (!(tubeAspirateBottomMm >= 0) || tubeAspirateBottomMm > 5) {
+    throw new Error("Tube aspirate height must be between 0 and 5 mm above the tube bottom.");
+  }
   if (finalVolumeUl > maxWellVolumeUl) {
     // Invariant 4: never silently exceed real well capacity.
     throw new Error(
@@ -517,6 +536,10 @@ export function generateTubeNormalisation(options: TubeNormalisationOptions): Tu
       : "large = None",
   ].join("\n");
 
+  // A 50 mL Falcon needs to clear its conical taper; any other tube is
+  // aspirated from the bottom.
+  const waterAspirateMm = waterLabware === LABWARE.falconRack ? FALCON_ASPIRATE_BOTTOM_MM : ASPIRATE_BOTTOM_MM;
+
   const body = `
 dest = protocol.load_labware(${py(destPlateType)}, ${py(destSlot)})
 water_rack = protocol.load_labware(${py(waterLabware)}, ${py(waterSlot)})
@@ -554,15 +577,18 @@ for pipette in [p for p in (small, large) if p is not None]:
         continue
     pipette.pick_up_tip()
     for well_name, volume in jobs:
-        pipette.aspirate(volume, water.bottom(3))
-        pipette.dispense(volume, dest.wells_by_name()[well_name].top(-2))
-        pipette.blow_out(dest.wells_by_name()[well_name].top(-2))
+        pipette.aspirate(volume, water.bottom(${waterAspirateMm}))
+        pipette.dispense(volume, dest.wells_by_name()[well_name].top(${NON_CONTACT_DISPENSE_TOP_MM}))
+        # Above the well, so the shared tip stays clean (pipetting guide §5).
+        pipette.blow_out(dest.wells_by_name()[well_name].top(${NON_CONTACT_DISPENSE_TOP_MM}))
     pipette.drop_tip()
 
 notify("Water added - starting part transfers")
 
 # Pass 2: one fresh tip per tube. Tube -> well -> trash, so no tip ever returns
-# to a stock tube after touching the plate.
+# to a stock tube after touching the plate. Aspirate low in the tube: at
+# bottom(2) the tip often came up short (2026-11-13). Dispense slowly
+# and off-centre, then blow out at the bottom (pipetting guide §3, §5).
 for well_name, entry in PLAN.items():
     volume = entry["part_ul"]
     if volume <= 0:
@@ -570,16 +596,20 @@ for well_name, entry in PLAN.items():
         continue
     pipette = pipette_for(volume)
     tube = racks[entry["rack"]].wells_by_name()[entry["tube"]]
+    well = dest.wells_by_name()[well_name]
     pipette.pick_up_tip()
-    pipette.aspirate(volume, tube.bottom(2))
-    pipette.dispense(volume, dest.wells_by_name()[well_name].bottom(2))
+    pipette.aspirate(volume, tube.bottom(${tubeAspirateBottomMm}))
+    pipette.dispense(
+        volume,
+        well.bottom(${CONTACT_DISPENSE_BOTTOM_MM}).move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)),
+        rate=${SLOW_DISPENSE_RATE},
+    )
 ${
     mixCycles > 0
-      ? `    mix_volume = min(entry["final_ul"] * 0.5, pipette.max_volume)
-    pipette.mix(${mixCycles}, mix_volume, dest.wells_by_name()[well_name].bottom(2))`
-      : "    pass"
-  }
-    pipette.blow_out(dest.wells_by_name()[well_name].top(-2))
+      ? `    pipette.mix(${mixCycles}, min(entry["final_ul"] * 0.5, pipette.max_volume), well.bottom(${ASPIRATE_BOTTOM_PLATE_SAFE_MM}))
+`
+      : ""
+  }    pipette.blow_out(well.bottom(${SMALL_BLOWOUT_BOTTOM_MM}))
     pipette.drop_tip()
 
 rows = ["well,part,rack,tube,stock_ngul,part_ul,water_ul,final_ul,achieved_ngul,flag"]
@@ -614,11 +644,13 @@ notify("Normalisation complete:\\n\`\`\`" + "\\n".join(rows) + "\`\`\`")
         apiLevel: "2.23",
       },
       notify,
+      ["from opentrons import types"],
     ) +
       `
 TARGET_NGUL = ${target}
 FINAL_VOLUME_UL = ${finalVolumeUl}
 TUBE_DEAD_VOLUME_UL = ${tubeDeadVolumeUl}
+TUBE_ASPIRATE_BOTTOM_MM = ${tubeAspirateBottomMm}
 
 # Tube loading map. Fill the racks exactly as below before starting the run --
 # the protocol has no way to detect a tube in the wrong position.

@@ -90,10 +90,26 @@ export const RETURN_BLOWOUT_BOTTOM_MM = 3;
 /**
  * Aspirate this far above a tube or well bottom. At default height the last
  * wells of a master-mix pass got air; bottom(1) fixed it (2025-10-14).
- * Raise to 2 if you see overpressure errors on a plate (2025-10-15).
+ * Raise to 2 if you see overpressure errors on a plate (2025-10-15) — but
+ * never from a 1.5 mL tube: tube normalisation at bottom(2) often aspirated
+ * short (2026-11-13).
  */
 export const ASPIRATE_BOTTOM_MM = 1;
 export const ASPIRATE_BOTTOM_PLATE_SAFE_MM = 2;
+
+/**
+ * Contact dispense height in a plate well, used with the slow off-centre
+ * dispense (Golden Gate, tube normalisation).
+ */
+export const CONTACT_DISPENSE_BOTTOM_MM = 0.5;
+
+/**
+ * Aspirate this far above the bottom of a 1.5 mL tube when the whole tube is
+ * meant to be taken. 2 mm left part behind in many tubes, and 1 mm is still
+ * high in a conical tube (Jack, tube normalisation, 2026-11-13). Not lower by
+ * default: a tip flat on the tube floor can seal and draw nothing.
+ */
+export const TUBE_ASPIRATE_BOTTOM_MM = 0.5;
 
 /** Aspirate this far above the bottom of a 50 mL Falcon. */
 export const FALCON_ASPIRATE_BOTTOM_MM = 3;

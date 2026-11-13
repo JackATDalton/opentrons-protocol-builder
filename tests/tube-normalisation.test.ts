@@ -6,6 +6,12 @@ import {
   planTube,
   type TubeSample,
 } from "../src/generators/tube-normalisation";
+import {
+  DISPENSE_X_OFFSET_MM,
+  TUBE_ASPIRATE_BOTTOM_MM,
+  SLOW_DISPENSE_RATE,
+  SMALL_BLOWOUT_BOTTOM_MM,
+} from "../src/core/pipetting";
 
 const base = (overrides: Partial<Parameters<typeof generateTubeNormalisation>[0]> = {}) => ({
   deck: STEEL_LAB_FLEX,
@@ -213,6 +219,39 @@ describe("generateTubeNormalisation", () => {
     expect(r.warnings.join(" ")).toMatch(/below the 1 uL minimum/);
   });
 
+});
+
+describe("pipetting technique", () => {
+  // Every height and rate comes from core/pipetting.ts; these pin the ones a
+  // bench run showed matter (pipetting guide §3, §5).
+  for (const mixCycles of [0, 3]) {
+    const src = generateTubeNormalisation(base({ mixCycles })).source;
+
+    it(`aspirates low in the tube by default (mix ${mixCycles})`, () => {
+      // At bottom(2) the tip often came up short, and 1 mm is still high (2026-11-13).
+      expect(TUBE_ASPIRATE_BOTTOM_MM).toBeLessThan(1);
+      expect(src).toContain(`tube.bottom(${TUBE_ASPIRATE_BOTTOM_MM})`);
+    });
+
+    it(`dispenses slowly and off-centre, then blows out at the bottom (mix ${mixCycles})`, () => {
+      expect(src).toContain(`move(types.Point(x=${DISPENSE_X_OFFSET_MM}, y=0, z=0)),\n`);
+      expect(src).toContain(`rate=${SLOW_DISPENSE_RATE}`);
+      expect(src).toContain(`well.bottom(${SMALL_BLOWOUT_BOTTOM_MM}))`);
+      expect(src).toContain("from opentrons import types");
+    });
+
+    it(`writes no placeholder statement (mix ${mixCycles})`, () => {
+      expect(src).not.toMatch(/^\s*pass$/m);
+      expect(src.includes("pipette.mix(")).toBe(mixCycles > 0);
+    });
+  }
+});
+
+describe("tube aspirate height", () => {
+  it("uses the height given, and refuses one that is not plausible", () => {
+    expect(generateTubeNormalisation(base({ tubeAspirateBottomMm: 0.2 })).source).toContain("tube.bottom(0.2)");
+    expect(() => generateTubeNormalisation(base({ tubeAspirateBottomMm: -1 }))).toThrow(/aspirate height/);
+  });
 });
 
 describe("tube positions and plate layout", () => {

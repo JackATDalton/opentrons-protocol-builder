@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "61cb315aded9bbd4fd4240001a551527c8e1f2b7",
+  "sourceRevision": "72195f5ba6b6165f7f9ac619df9918772a3cae51",
   "files": [
     ".github/workflows/ci.yml",
     ".github/workflows/deploy.yml",
