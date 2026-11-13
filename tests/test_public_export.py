@@ -103,3 +103,15 @@ class PublicSeedTest(unittest.TestCase):
     def test_missing_seed_stops_the_export(self):
         with self.assertRaisesRegex(ValueError, 'no SEED'):
             exporter._seed('const OTHER = 1;', 'view.tsx', exporter.anonymise_tube_seed)
+
+    def test_example_sheets_ship_as_headers_only(self):
+        out = exporter.headers_only((REPO / 'src/ui/examples.ts').read_text())
+        contents = exporter.EXAMPLE.findall(out)
+        self.assertGreater(len(contents), 3)
+        for content in contents:
+            self.assertEqual(content.count('\n'), 1, content)
+            self.assertIn(',', content)
+
+    def test_missing_examples_stop_the_export(self):
+        with self.assertRaisesRegex(ValueError, 'no example CSVs'):
+            exporter.headers_only('export const X = 1;')

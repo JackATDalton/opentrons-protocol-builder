@@ -18,7 +18,7 @@ import { generateTransfer } from "../src/generators/transfer";
 import { generateTubeNormalisation } from "../src/generators/tube-normalisation";
 import { parseAssemblyLayout } from "../src/parsers/assembly-layout";
 import { parsePlateCsv } from "../src/parsers/plate-csv";
-import { ASSEMBLY_LAYOUT_EXAMPLE, REPOSITORY_PLATE_EXAMPLE } from "../src/ui/examples";
+import { ASSEMBLY_LAYOUT_CSV, REPOSITORY_PLATE_CSV } from "./sample-data";
 
 const LAB = LAB_SLACK_WEBHOOK_URL.trim();
 
@@ -48,8 +48,8 @@ const sources: Record<string, string> = {
   }).source,
   "golden gate": generateGoldenGate({
     deck: STEEL_LAB_FLEX,
-    layout: parseAssemblyLayout(ASSEMBLY_LAYOUT_EXAMPLE.content),
-    repoPlate: parsePlateCsv(REPOSITORY_PLATE_EXAMPLE.content),
+    layout: parseAssemblyLayout(ASSEMBLY_LAYOUT_CSV),
+    repoPlate: parsePlateCsv(REPOSITORY_PLATE_CSV),
     plateType: LABWARE.pcrPlate,
   }).source,
 };

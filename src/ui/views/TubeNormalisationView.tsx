@@ -477,7 +477,7 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
                     setWellEdits({});
                   }}
                   example={TUBE_PLATE_LAYOUT_EXAMPLE}
-                  placeholder={"well,name\nA1,P1d\nB1,P2d"}
+                  placeholder="well,name"
                 />
               </div>
             </Panel>

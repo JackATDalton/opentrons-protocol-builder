@@ -267,7 +267,7 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
             rows={8}
             value={plates[selected]?.text ?? ""}
             onChange={(text) => setPlates((prev) => prev.map((p, i) => (i === selected ? { ...p, text } : p)))}
-            placeholder={"Well,Combination_ID,Promoter,CDS\nA1,1,P1,C1"}
+            placeholder="Well,Combination_ID,Promoter,UTR,CDS,Terminator"
             example={ASSEMBLY_LAYOUT_EXAMPLE}
             onFiles={addFiles}
           />
@@ -279,7 +279,7 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
             a colon, so <code>P1d: PLacI</code> matches <code>P1d</code>. Rows whose second value is a
             number are read as concentrations and are not needed here.
           </p>
-          <CsvInput label="Repository plate CSV" rows={8} value={repoText} onChange={setRepoText} placeholder={"Well,Value\nA1,P1\nA2,C1"} example={REPOSITORY_PLATE_EXAMPLE} />
+          <CsvInput label="Repository plate CSV" rows={8} value={repoText} onChange={setRepoText} placeholder="Well,Value" example={REPOSITORY_PLATE_EXAMPLE} />
         </Panel>
         <Panel title="Repository volumes (optional)">
           <p className="note">
@@ -288,7 +288,7 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
             checks every part has enough volume for all the plates above; without it, availability
             shows as unknown.
           </p>
-          <CsvInput label="Repository volumes CSV" rows={4} value={volumesText} onChange={setVolumesText} placeholder={"well,name,final_volume_ul\nA1,P1d,100"} example={REPO_VOLUMES_EXAMPLE} />
+          <CsvInput label="Repository volumes CSV" rows={4} value={volumesText} onChange={setVolumesText} placeholder="well,name,final_volume_ul" example={REPO_VOLUMES_EXAMPLE} />
         </Panel>
         <Panel title="Reaction">
           <div className="fields">

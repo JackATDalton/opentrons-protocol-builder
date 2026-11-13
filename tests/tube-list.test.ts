@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { STEEL_LAB_FLEX } from "../src/core/deck";
 import { generateTubeNormalisation } from "../src/generators/tube-normalisation";
 import { parsePlateLayout, parseSamples } from "../src/parsers/tube-list";
-import { TUBE_PLATE_LAYOUT_EXAMPLE } from "../src/ui/examples";
+import { PLATE_LAYOUT_CSV } from "./sample-data";
 import { crc32, makeZip } from "../src/ui/zip";
 
 describe("parseSamples, headed CSV", () => {
@@ -34,7 +34,7 @@ describe("parseSamples, headed CSV", () => {
 
 describe("parsePlateLayout", () => {
   it("reads well,name rows", () => {
-    expect(parsePlateLayout(TUBE_PLATE_LAYOUT_EXAMPLE.content).wells).toMatchObject({ P1d: "A1", T1m: "B2" });
+    expect(parsePlateLayout(PLATE_LAYOUT_CSV).wells).toMatchObject({ P1: "A1", T1: "B2" });
   });
 
   it("reads a plate grid", () => {

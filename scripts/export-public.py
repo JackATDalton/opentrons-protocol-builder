@@ -50,6 +50,16 @@ def anonymise_plate_seed(seed):
     return '\n'.join(out)
 
 
+EXAMPLE = re.compile(r'content: `([^`]*)`')
+
+
+def headers_only(text, path='src/ui/examples.ts'):
+    """Each downloadable example CSV keeps its header row and nothing else."""
+    if not EXAMPLE.search(text):
+        raise ValueError(f'{path}: no example CSVs found; update the exporter before publishing.')
+    return EXAMPLE.sub(lambda m: 'content: `' + m.group(1).split('\n', 1)[0] + '\n`', text)
+
+
 PUBLIC_SEEDS = {
     'src/ui/views/TubeNormalisationView.tsx': anonymise_tube_seed,
     'src/ui/views/PlateNormalisationView.tsx': anonymise_plate_seed,
@@ -91,6 +101,9 @@ def export(destination):
             continue
         text = HOOK.sub('', text)
         text = text.replace('https://github.com/JackATDalton/opentrons-protocol-builder', f'https://github.com/{PUBLIC}')
+        if path == 'src/ui/examples.ts':
+            # Templates only: the lab's example rows stay private.
+            text = headers_only(text, path)
         if path in PUBLIC_SEEDS:
             # The lab's own parts and readings stay private; the public app
             # opens with the same example numbers, named by position.

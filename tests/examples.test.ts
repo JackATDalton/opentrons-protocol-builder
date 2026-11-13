@@ -16,11 +16,31 @@ import {
   REPO_VOLUMES_EXAMPLE,
   REPOSITORY_PLATE_EXAMPLE,
   TUBE_LIST_EXAMPLE,
+  type CsvExample,
 } from "../src/ui/examples";
+import * as exampleModule from "../src/ui/examples";
 import { parseSamples } from "../src/ui/views/TubeNormalisationView";
 
+// The public edition ships each example as its header row only, so the data
+// checks below run only where an example carries rows; the header check always runs.
+const hasRows = (...examples: CsvExample[]) =>
+  examples.every((e) => e.content.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).length > 1);
+
 describe("downloadable CSV examples", () => {
-  it("tube list parses cleanly and normalises", () => {
+  const all = Object.entries(exampleModule).filter(
+    (entry): entry is [string, CsvExample] => typeof entry[1] === "object" && entry[1] !== null && "content" in entry[1],
+  );
+
+  it("each starts with a header naming its columns", () => {
+    expect(all.length).toBeGreaterThan(0);
+    for (const [name, example] of all) {
+      const header = example.content.split(/\r?\n/)[0];
+      expect(header.split(",").length, name).toBeGreaterThan(1);
+      expect(example.filename, name).toMatch(/\.csv$/);
+    }
+  });
+
+  it.skipIf(!hasRows(TUBE_LIST_EXAMPLE))("tube list parses cleanly and normalises", () => {
     const { samples, errors } = parseSamples(TUBE_LIST_EXAMPLE.content);
     expect(errors).toEqual([]);
     expect(samples.some((s) => s.masterMix)).toBe(true);
@@ -29,13 +49,13 @@ describe("downloadable CSV examples", () => {
     ).not.toThrow();
   });
 
-  it("plate contents gives every well a name and a concentration", () => {
+  it.skipIf(!hasRows(PLATE_CONTENTS_EXAMPLE))("plate contents gives every well a name and a concentration", () => {
     const plate = parsePlateCsv(PLATE_CONTENTS_EXAMPLE.content);
     expect(occupiedWells(plate)).toHaveLength(6);
     expect(Object.values(plate).every((w) => w.name && w.concentration !== null)).toBe(true);
   });
 
-  it("volumes example parses and covers the assembly layout example", () => {
+  it.skipIf(!hasRows(REPO_VOLUMES_EXAMPLE, ASSEMBLY_LAYOUT_EXAMPLE, REPOSITORY_PLATE_EXAMPLE))("volumes example parses and covers the assembly layout example", () => {
     const volumes = parseVolumesCsv(REPO_VOLUMES_EXAMPLE.content);
     expect(Object.keys(volumes)).toHaveLength(6);
     expect(volumes.P1d.volumeUl).toBe(100);
@@ -48,7 +68,7 @@ describe("downloadable CSV examples", () => {
     expect(report.every((r) => r.status === "ok")).toBe(true);
   });
 
-  it("assembly layout and repository plate assemble together, on or off the robot", () => {
+  it.skipIf(!hasRows(ASSEMBLY_LAYOUT_EXAMPLE, REPOSITORY_PLATE_EXAMPLE))("assembly layout and repository plate assemble together, on or off the robot", () => {
     for (const thermocycler of ["onboard", "external"] as const) {
       const result = generateGoldenGate({
         deck: STEEL_LAB_FLEX,

@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "1328ed9b17ec0c4e0c715d077fc62ba6cba23b85",
+  "sourceRevision": "0d52e3d446993727c785c20cfe3dc4d885f91c41",
   "files": [
     ".github/workflows/ci.yml",
     ".github/workflows/deploy.yml",
@@ -89,6 +89,7 @@
     "tests/notify.test.ts",
     "tests/parsers.test.ts",
     "tests/persistence.test.ts",
+    "tests/sample-data.ts",
     "tests/steps.test.ts",
     "tests/test_public_export.py",
     "tests/tube-list.test.ts",
