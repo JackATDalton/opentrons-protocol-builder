@@ -134,7 +134,9 @@ export function App() {
   const [tab, setTab] = useState<Tab>("setup");
   const [deckName, setDeckName] = useState(DECK_PRESETS[DECK_PRESETS.length - 1].name);
   const [author, setAuthor] = useState("");
-  const [slackWebhook, setSlackWebhook] = useState(LAB_SLACK_WEBHOOK_URL);
+  // Blank means "the lab webhook" (labNotify falls back to it), so clearing the
+  // box can never switch alerts off in the lab build.
+  const [slackWebhook, setSlackWebhook] = useState("");
   const [slackId, setSlackId] = useState("");
   const [slackError, setSlackError] = useState("");
 
@@ -255,9 +257,13 @@ export function App() {
               autoComplete="off"
               value={slackWebhook}
               onChange={(e) => setSlackWebhook(e.target.value)}
-              placeholder="Optional incoming webhook URL"
+              placeholder={LAB_SLACK_WEBHOOK_URL ? "Lab webhook (always included)" : "Optional incoming webhook URL"}
             />
-            <p className="note">Optional. Kept in this tab and included in downloaded protocols. Leave blank to disable Slack alerts.</p>
+            <p className="note">
+              {LAB_SLACK_WEBHOOK_URL
+                ? "Every protocol posts to the lab Slack. Paste another webhook only to post somewhere else; leave blank for the lab channel. Alerts are skipped in simulation."
+                : "Optional. Kept in this tab and included in downloaded protocols. Leave blank to disable Slack alerts."}
+            </p>
           </div>
           <div className="field">
             <label htmlFor="slack">Slack member ID</label>

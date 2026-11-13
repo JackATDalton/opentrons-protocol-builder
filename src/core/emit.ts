@@ -5,13 +5,18 @@
  * the parts every protocol shares, so notification handling and Python literal
  * escaping are implemented once rather than four times.
  *
- * Note on secrets: the Slack webhook is *never* baked into generator source.
- * It is supplied by the user at generate time and, if omitted, the emitted
- * protocol simply prints instead of posting. Never commit a real webhook URL.
+ * Slack: every protocol carries a webhook. One supplied at generate time is
+ * used; otherwise `LAB_SLACK_WEBHOOK_URL` from `src/config/lab.ts` is, so no
+ * route through the app, a script or a test can produce a lab protocol that
+ * stays silent. (The public export blanks that constant, so the public app
+ * only posts when a user enters their own webhook.) Alerts are skipped while
+ * the protocol is being simulated or analysed, so CI and the Opentrons App's
+ * upload check never post to the channel.
  */
+import { LAB_SLACK_WEBHOOK_URL } from "../config/lab";
 
 export interface NotifyConfig {
-  /** Incoming webhook URL. Omit to emit a protocol that only prints. */
+  /** Incoming webhook URL. Omit to use the lab webhook (none in the public build). */
   slackWebhookUrl?: string;
   /** Optional Slack member ID to @-mention, e.g. "U01ABCDEFGH". */
   slackUserId?: string;
@@ -67,12 +72,14 @@ export function indent(text: string, level: number): string {
 /**
  * Emit the metadata/requirements header plus a `notify` helper.
  *
- * When no webhook is configured the helper still exists and still logs, so
- * generator code can call `notify(...)` unconditionally.
+ * The helper always exists and always logs, so generator code can call
+ * `notify(...)` unconditionally. It posts only when a webhook is set — the
+ * one passed in, or the lab's — and only on a real run, never in simulation.
  */
 export function preamble(meta: ProtocolMeta, notify: NotifyConfig = {}, extraImports: string[] = []): string {
   const apiLevel = meta.apiLevel ?? "2.23";
-  const hasWebhook = Boolean(notify.slackWebhookUrl);
+  const webhook = webhookFor(notify);
+  const hasWebhook = Boolean(webhook);
   const mention = notify.slackUserId ? `<@${notify.slackUserId}> ` : "";
 
   const imports = ["from opentrons import protocol_api", ...extraImports];
@@ -80,8 +87,14 @@ export function preamble(meta: ProtocolMeta, notify: NotifyConfig = {}, extraImp
 
   const notifyBody = hasWebhook
     ? `def notify(message):
-    """Post to Slack, and always log locally so the run record is complete."""
+    """Post to Slack, and always log locally so the run record is complete.
+
+    Skipped while simulating: opentrons_simulate, CI and the Opentrons App's
+    analysis on upload all run this file, and must not post to the channel.
+    """
     print(message)
+    if SIMULATING:
+        return
     try:
         requests.post(WEBHOOK_URL, json={"text": f"${mention}{message}"}, timeout=10)
     except Exception as exc:
@@ -102,10 +115,20 @@ requirements = {
     "robotType": "Flex",
     "apiLevel": ${pyStr(apiLevel)},
 }
-${hasWebhook ? `\nWEBHOOK_URL = ${pyStr(notify.slackWebhookUrl as string)}\n` : ""}
+${hasWebhook ? `\nWEBHOOK_URL = ${pyStr(webhook as string)}\n` : ""}
+# Set from the protocol context when run() starts; see notify().
+SIMULATING = True
 
 ${notifyBody}
 `;
+}
+
+/**
+ * The webhook a protocol will post to: the one given, else the lab's. Blank
+ * only where the lab constant is blank, i.e. in the public export.
+ */
+export function webhookFor(notify: NotifyConfig = {}): string | undefined {
+  return notify.slackWebhookUrl?.trim() || LAB_SLACK_WEBHOOK_URL.trim() || undefined;
 }
 
 /**
@@ -115,6 +138,8 @@ ${notifyBody}
 export function runFunction(body: string, protocolLabel: string): string {
   return `
 def run(protocol: protocol_api.ProtocolContext):
+    global SIMULATING
+    SIMULATING = protocol.is_simulating()
     try:
 ${indent(body.trim(), 2)}
     except Exception as exc:

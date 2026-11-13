@@ -27,6 +27,8 @@ const outDir = join(here, "..", "tests", "fixtures");
 mkdirSync(outDir, { recursive: true });
 
 /** Fixtures carry no webhook, so nothing posts to Slack from CI. */
+// No webhook given: the lab one is used (see core/emit.ts), and the protocol
+// skips posting while simulated, so CI never messages the channel.
 const notify = {};
 
 function write(name: string, source: string): void {

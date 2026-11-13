@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "45e7dc8322962fb4ad69f66704228c0c77dcb114",
+  "sourceRevision": "100efd37d32c5dcc166cc595c13bb2ba87db97d3",
   "files": [
     ".github/workflows/ci.yml",
     ".github/workflows/deploy.yml",
@@ -86,6 +86,7 @@
     "tests/invariants.test.ts",
     "tests/labware.test.tsx",
     "tests/new-protocol.test.ts",
+    "tests/notify.test.ts",
     "tests/parsers.test.ts",
     "tests/persistence.test.ts",
     "tests/steps.test.ts",

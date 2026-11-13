@@ -213,11 +213,6 @@ describe("generateTubeNormalisation", () => {
     expect(r.warnings.join(" ")).toMatch(/below the 1 uL minimum/);
   });
 
-  it("contains no webhook when none is configured", () => {
-    const r = generateTubeNormalisation(base());
-    expect(r.source).not.toContain("hooks.slack.com");
-    expect(r.source).toContain("def notify(message)");
-  });
 });
 
 describe("tube positions and plate layout", () => {

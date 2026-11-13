@@ -4,9 +4,16 @@ import type { NotifyConfig } from "../core/emit";
 export const LAB_SLACK_WEBHOOK_URL =
   "";
 
-/** Default notification settings; the UI lets each user add their member ID. */
-export function labNotify(slackUserId?: string, webhookUrl = LAB_SLACK_WEBHOOK_URL): NotifyConfig {
-  return { slackWebhookUrl: webhookUrl.trim() || undefined, slackUserId: slackUserId || undefined };
+/**
+ * Notification settings for a run. A blank or missing webhook falls back to
+ * the lab's, so a lab protocol always posts; `preamble` applies the same
+ * fallback for code that bypasses this function.
+ */
+export function labNotify(slackUserId?: string, webhookUrl = ""): NotifyConfig {
+  return {
+    slackWebhookUrl: webhookUrl.trim() || LAB_SLACK_WEBHOOK_URL.trim() || undefined,
+    slackUserId: slackUserId || undefined,
+  };
 }
 
 /** Accept "U0123ABCD", "@U0123ABCD" or "<@U0123ABCD>"; blank means no tag. */

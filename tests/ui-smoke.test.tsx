@@ -10,7 +10,7 @@ import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { BARE_FLEX, STEEL_LAB_FLEX, type DeckConfig } from "../src/core/deck";
-import { labNotify, normaliseSlackUserId } from "../src/config/lab";
+import { LAB_SLACK_WEBHOOK_URL, labNotify, normaliseSlackUserId } from "../src/config/lab";
 import { App } from "../src/ui/App";
 import { MiniprepView } from "../src/ui/views/MiniprepView";
 import { PlateNormalisationView } from "../src/ui/views/PlateNormalisationView";
@@ -105,9 +105,13 @@ describe("normaliseSlackUserId", () => {
 });
 
 
-describe("optional Slack configuration", () => {
-  it("disables notifications when the user clears the webhook", () => {
-    expect(labNotify("U0123ABCD", " ")).toEqual({ slackWebhookUrl: undefined, slackUserId: "U0123ABCD" });
+describe("Slack configuration", () => {
+  it("falls back to the lab webhook when the box is cleared", () => {
+    // The lab webhook in the private build; nothing in the public export.
+    expect(labNotify("U0123ABCD", " ")).toEqual({
+      slackWebhookUrl: LAB_SLACK_WEBHOOK_URL || undefined,
+      slackUserId: "U0123ABCD",
+    });
   });
   it("uses a user-supplied webhook instead of the lab default", () => {
     expect(labNotify(undefined, " https://example.org/webhook ").slackWebhookUrl).toBe("https://example.org/webhook");
