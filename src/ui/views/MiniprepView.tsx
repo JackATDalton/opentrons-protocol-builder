@@ -22,6 +22,7 @@ import { CheckField, Messages, NumberField, Panel, ProtocolTab, SelectField, Tal
 import { PlateMap } from "../PlateMap";
 import type { Tab } from "../tabs";
 import { LABWARE } from "../../core/labware";
+import { protocolStem, protocolTitle, todayStamp } from "../naming";
 
 const RACK = LABWARE.tubeRack;
 
@@ -56,6 +57,8 @@ export function MiniprepView({ deck, tab, author, slackUserId, notify }: Props) 
   const [washRounds, setWashRounds] = useState(DEFAULT_PARAMS.washRounds);
   const [elutionVolume, setElutionVolume] = useState(DEFAULT_PARAMS.elutionVolumeUl);
 
+  const date = todayStamp();
+
   const generated = useMemo((): { result?: MiniprepResult; error?: string } => {
     try {
       return {
@@ -77,6 +80,7 @@ export function MiniprepView({ deck, tab, author, slackUserId, notify }: Props) 
           },
           author,
           notify: notify(slackUserId),
+          protocolName: protocolTitle("Vacuum Manifold Miniprep", [], date),
         }),
       };
     } catch (e) {
@@ -84,7 +88,7 @@ export function MiniprepView({ deck, tab, author, slackUserId, notify }: Props) 
     }
   }, [
     deck, racks, sampleSource, preloaded, names, nBatches, nElutions, cultureVolume, lysisVolume, neutralisationVolume,
-    neutralisationMix, washVolume, washRounds, elutionVolume, author, slackUserId, notify,
+    neutralisationMix, washVolume, washRounds, elutionVolume, author, slackUserId, notify, date,
   ]);
 
   const result = generated.result;
@@ -373,7 +377,7 @@ export function MiniprepView({ deck, tab, author, slackUserId, notify }: Props) 
       )}
 
       {tab === "protocol" && result && (
-        <ProtocolTab source={result.source} filename={`miniprep_${result.totalSamples}_samples.py`} />
+        <ProtocolTab source={result.source} filename={`${protocolStem(`miniprep_${result.totalSamples}_samples`, [], date)}.py`} />
       )}
 
       {tab !== "setup" && !result && (

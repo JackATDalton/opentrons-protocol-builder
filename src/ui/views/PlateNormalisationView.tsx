@@ -17,6 +17,7 @@ import { occupiedWells, parsePlateCsv } from "../../parsers/plate-csv";
 import type { Tab } from "../tabs";
 import { PLATE_CONTENTS_EXAMPLE } from "../examples";
 import { LABWARE, labwareOptions } from "../../core/labware";
+import { protocolStem, protocolTitle, todayStamp, uploadLabel } from "../naming";
 
 const SEED = `Location,Name
 A1,A1
@@ -42,12 +43,16 @@ interface Props {
 
 export function PlateNormalisationView({ deck, tab, author, slackUserId, notify }: Props) {
   const [text, setText] = useState(SEED);
+  const [plateFile, setPlateFile] = useState("");
   const [target, setTarget] = useState(30);
   const [finalVolume, setFinalVolume] = useState(100);
   const [sourceVolume, setSourceVolume] = useState(45);
   const [deadVolume, setDeadVolume] = useState(2);
   const [plateType, setPlateType] = useState<string>(LABWARE.pcrPlate);
   const [waterWell, setWaterWell] = useState("A1");
+
+  const date = todayStamp();
+  const plateLabel = plateFile ? uploadLabel(plateFile) : "";
 
   const parsed = useMemo(() => {
     try {
@@ -82,13 +87,13 @@ export function PlateNormalisationView({ deck, tab, author, slackUserId, notify 
           deadVolumeUl: deadVolume,
           author,
           notify: notify(slackUserId),
-          protocolName: `Plate normalisation at ${target} ng/uL`,
+          protocolName: protocolTitle(`Plate normalisation at ${target} ng/uL`, [plateLabel], date),
         }),
       };
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-  }, [deck, parsed, target, finalVolume, sourceVolume, deadVolume, plateType, waterWell, author, slackUserId, notify]);
+  }, [deck, parsed, target, finalVolume, sourceVolume, deadVolume, plateType, waterWell, author, slackUserId, notify, plateLabel, date]);
 
   const result = generated.result;
 
@@ -105,7 +110,8 @@ export function PlateNormalisationView({ deck, tab, author, slackUserId, notify 
                 rows. Order does not matter — a row is read as a concentration if its value is a
                 number.
               </p>
-              <CsvInput label="Plate contents" value={text} onChange={setText} example={PLATE_CONTENTS_EXAMPLE} />
+              <CsvInput label="Plate contents" value={text} onChange={setText} example={PLATE_CONTENTS_EXAMPLE}
+                fileName={plateFile} onFileName={setPlateFile} />
               <p className="note">{parsed.wells?.length ?? 0} wells with a concentration</p>
             </Panel>
 
@@ -220,7 +226,7 @@ export function PlateNormalisationView({ deck, tab, author, slackUserId, notify 
       )}
 
       {tab === "protocol" && result && (
-        <ProtocolTab source={result.source} filename={`plate_normalisation_${target}ngul.py`} />
+        <ProtocolTab source={result.source} filename={`${protocolStem(`plate_normalisation_${target}ngul`, [plateLabel], date)}.py`} />
       )}
 
       {tab !== "setup" && tab !== "simulate" && !result && (

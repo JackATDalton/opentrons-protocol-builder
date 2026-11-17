@@ -262,7 +262,7 @@ export function parseWellList(text: string): { wells: string[]; errors: string[]
 }
 
 /** File contents and pasted text feed the same parser and remain editable. */
-export function CsvInput({ label, value, onChange, rows, placeholder, example, onFiles }: {
+export function CsvInput({ label, value, onChange, rows, placeholder, example, onFiles, fileName, onFileName }: {
   label: string;
   value: string;
   onChange: (text: string) => void;
@@ -276,6 +276,13 @@ export function CsvInput({ label, value, onChange, rows, placeholder, example, o
    * via `value`/`onChange`.
    */
   onFiles?: (files: { name: string; text: string }[]) => void;
+  /**
+   * The uploaded file this text came from, so protocol names can carry it.
+   * Set on upload; cleared when the text is emptied. Edits keep it — they are
+   * corrections to that plate, not a different plate.
+   */
+  fileName?: string;
+  onFileName?: (name: string) => void;
 }) {
   const id = useId();
   const revision = useRef(0);
@@ -299,15 +306,24 @@ export function CsvInput({ label, value, onChange, rows, placeholder, example, o
           const read = await Promise.all(files.map(async (f) => ({ name: f.name, text: await f.text() })));
           if (current !== revision.current) return;
           if (onFiles) onFiles(read);
-          else onChange(read[0].text);
+          else {
+            onChange(read[0].text);
+            onFileName?.(read[0].name);
+          }
         } catch {
           if (current === revision.current) setError(`Could not read the file. Try again or paste the CSV below.`);
         }
       }} />
     {error && <p role="alert">{error}</p>}
+    {fileName && <p className="note">From {fileName} — protocol names include it.</p>}
     <label htmlFor={`${id}-text`}>Or paste / edit CSV</label>
     <textarea id={`${id}-text`} aria-label={label} value={value} rows={rows}
       placeholder={placeholder} spellCheck={false}
-      onChange={(event) => { revision.current += 1; setError(""); onChange(event.target.value); }} />
+      onChange={(event) => {
+        revision.current += 1;
+        setError("");
+        onChange(event.target.value);
+        if (!event.target.value.trim()) onFileName?.("");
+      }} />
   </div>;
 }

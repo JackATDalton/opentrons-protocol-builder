@@ -31,6 +31,7 @@ import {
   TextField,
   downloadPython,
 } from "../common";
+import { protocolStem, protocolTitle, todayStamp, uploadLabel } from "../naming";
 import { ASSEMBLY_LAYOUT_EXAMPLE, REPO_VOLUMES_EXAMPLE, REPOSITORY_PLATE_EXAMPLE } from "../examples";
 import { SimulationViewer } from "../SimulationViewer";
 import type { Tab } from "../tabs";
@@ -58,14 +59,12 @@ interface PlateEntry {
   text: string;
 }
 
-function slug(text: string): string {
-  return text.trim().replace(/\W+/g, "_").toLowerCase() || "golden_gate";
-}
 
 export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props) {
   const [plates, setPlates] = useState<PlateEntry[]>([{ label: "Plate 1", text: "" }]);
   const [selected, setSelected] = useState(0);
   const [repoText, setRepoText] = useState("");
+  const [repoFile, setRepoFile] = useState("");
   const [volumesText, setVolumesText] = useState("");
   const [masterMix, setMasterMix] = useState<Set<string>>(new Set());
   const [protocolName, setProtocolName] = useState("Golden Gate Assembly");
@@ -82,6 +81,12 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
   // The heater block stands in for the thermocycler's cold hold, so it is the
   // default home for the plate whenever this deck has one.
   const [assemblyOn, setAssemblyOn] = useState<"deck" | "heater-block">(hasHeaterBlock ? "heater-block" : "deck");
+
+  const date = todayStamp();
+  const repoLabel = uploadLabel(repoFile);
+  const baseName = protocolName.trim() || "Golden Gate Assembly";
+  /** The plate's own layout file, then the repository plate it draws from. */
+  const stemFor = (plateLabel: string) => protocolStem(baseName, [plateLabel, repoLabel], date);
 
   const parsedPlates = useMemo(
     () =>
@@ -141,7 +146,7 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
               layout: p.layout,
               repoPlate: parsedRepo.repo,
               plateType,
-              protocolName: plates.length > 1 ? `${protocolName} — ${p.label}` : protocolName,
+              protocolName: protocolTitle(baseName, [p.label, repoLabel], date),
               enzymeVolumePerWellUl: enzymeVolume,
               mmTubeWell,
               transferVolumeUl: transferVolume,
@@ -162,7 +167,7 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
         }
       }),
     [
-      parsedPlates, parsedRepo, deck, plateType, plates.length, protocolName, enzymeVolume, mmTubeWell,
+      parsedPlates, parsedRepo, deck, plateType, baseName, repoLabel, date, enzymeVolume, mmTubeWell,
       transferVolume, prewetVolume, profile, masterMix, thermocycler, assemblyOn, author, slackUserId, notify,
     ],
   );
@@ -219,7 +224,7 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
 
   const downloadAll = () => {
     for (const r of results) {
-      if (r.result) downloadPython(r.result.source, `${slug(protocolName)}_${slug(r.label)}.py`);
+      if (r.result) downloadPython(r.result.source, `${stemFor(r.label)}.py`);
     }
   };
 
@@ -279,7 +284,8 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
             a colon, so <code>P1d: PLacI</code> matches <code>P1d</code>. Rows whose second value is a
             number are read as concentrations and are not needed here.
           </p>
-          <CsvInput label="Repository plate CSV" rows={8} value={repoText} onChange={setRepoText} placeholder="Well,Value" example={REPOSITORY_PLATE_EXAMPLE} />
+          <CsvInput label="Repository plate CSV" rows={8} value={repoText} onChange={setRepoText} placeholder="Well,Value" example={REPOSITORY_PLATE_EXAMPLE}
+            fileName={repoFile} onFileName={setRepoFile} />
         </Panel>
         <Panel title="Repository volumes (optional)">
           <p className="note">
@@ -444,7 +450,7 @@ export function GoldenGateView({ deck, tab, author, slackUserId, notify }: Props
           {results.some((r) => !r.result) && " (fix the plates with errors first)"}.
         </div>
       )}
-      <ProtocolTab source={result.source} filename={`${slug(protocolName)}${plates.length > 1 ? `_${slug(current.label)}` : ""}.py`} />
+      <ProtocolTab source={result.source} filename={`${stemFor(current.label)}.py`} />
     </>}
     {(tab === "simulate" || tab === "protocol") && !result && (
       <div className="banner">

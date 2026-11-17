@@ -14,6 +14,7 @@ import { Messages, NumberField, Panel, ProtocolTab, SelectField, Tally } from ".
 import { PlateMap } from "../PlateMap";
 import type { Tab } from "../tabs";
 import { LABWARE, labwareOptions } from "../../core/labware";
+import { protocolStem, protocolTitle, todayStamp } from "../naming";
 
 const PLATE_TYPES = labwareOptions([LABWARE.pcrPlate, LABWARE.corningFlat96, LABWARE.nestFlat96, LABWARE.tubeRack]);
 
@@ -36,6 +37,8 @@ export function TransferView({ deck, tab, author, slackUserId, notify }: Props) 
   ]);
   const [volume, setVolume] = useState(200);
 
+  const date = todayStamp();
+
   const generated = useMemo((): { result?: TransferResult; error?: string } => {
     if (plates.some((p) => p.selected.size === 0)) {
       return { error: "Every source plate needs at least one well selected." };
@@ -48,12 +51,13 @@ export function TransferView({ deck, tab, author, slackUserId, notify }: Props) 
           transferVolumeUl: volume,
           author,
           notify: notify(slackUserId),
+          protocolName: protocolTitle("Plate to Tube Transfer", [], date),
         }),
       };
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-  }, [deck, plates, volume, author, slackUserId, notify]);
+  }, [deck, plates, volume, author, slackUserId, notify, date]);
 
   const result = generated.result;
 
@@ -209,7 +213,7 @@ export function TransferView({ deck, tab, author, slackUserId, notify }: Props) 
       )}
 
       {tab === "protocol" && result && (
-        <ProtocolTab source={result.source} filename={`plate_to_tube_${result.plan.length}.py`} />
+        <ProtocolTab source={result.source} filename={`${protocolStem(`plate_to_tube_${result.plan.length}`, [], date)}.py`} />
       )}
 
       {tab !== "setup" && !result && (

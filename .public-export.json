@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "72195f5ba6b6165f7f9ac619df9918772a3cae51",
+  "sourceRevision": "5bb1ebc2baac626901a711b08f6a8b6f818e81ef",
   "files": [
     ".github/workflows/ci.yml",
     ".github/workflows/deploy.yml",
@@ -69,6 +69,7 @@
     "src/ui/deckPlacement.ts",
     "src/ui/download.ts",
     "src/ui/examples.ts",
+    "src/ui/naming.ts",
     "src/ui/persistence.ts",
     "src/ui/styles.css",
     "src/ui/tabs.ts",
@@ -85,6 +86,7 @@
     "tests/goldengate.test.ts",
     "tests/invariants.test.ts",
     "tests/labware.test.tsx",
+    "tests/naming.test.ts",
     "tests/new-protocol.test.ts",
     "tests/notify.test.ts",
     "tests/parsers.test.ts",

@@ -41,6 +41,7 @@ import type { Tab } from "../tabs";
 import { TUBE_LIST_EXAMPLE, TUBE_PLATE_LAYOUT_EXAMPLE } from "../examples";
 import { LABWARE, labwareOptions } from "../../core/labware";
 import { TUBE_ASPIRATE_BOTTOM_MM } from "../../core/pipetting";
+import { protocolStem, protocolTitle, todayStamp, uploadLabel } from "../naming";
 
 // Kept for existing imports; the parser lives with the other CSV parsers.
 export { parseSamples };
@@ -100,6 +101,8 @@ interface Props {
 export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }: Props) {
   const [text, setText] = useState(SEED);
   const [layoutText, setLayoutText] = useState("");
+  const [tubeFile, setTubeFile] = useState("");
+  const [layoutFile, setLayoutFile] = useState("");
   const [target, setTarget] = useState(30);
   const [finalVolume, setFinalVolume] = useState(100);
   const [deadVolume, setDeadVolume] = useState(3);
@@ -115,6 +118,11 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
   const [heldTube, setHeldTube] = useState<string | null>(null);
   const [selectedWell, setSelectedWell] = useState<string | null>(null);
   const [racksShown, setRacksShown] = useState(1);
+
+  const date = todayStamp();
+  const tubeLabel = uploadLabel(tubeFile);
+  const layoutLabel = uploadLabel(layoutFile);
+  const sources = [tubeLabel, layoutLabel];
 
   const parsed = useMemo(() => parseSamples(text), [text]);
   const layout = useMemo(
@@ -173,13 +181,13 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
           destPlateType: DEST_PLATE,
           author,
           notify: notify(slackUserId),
-          protocolName: `Source plate normalisation at ${target} ng/uL`,
+          protocolName: protocolTitle(`Source plate normalisation at ${target} ng/uL`, [tubeLabel, layoutLabel], date),
         }),
       };
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-  }, [deck, parsed, samples, target, finalVolume, waterLabware, waterWell, deadVolume, mixCycles, tubeAspirate, author, slackUserId, notify]);
+  }, [deck, parsed, samples, target, finalVolume, waterLabware, waterWell, deadVolume, mixCycles, tubeAspirate, author, slackUserId, notify, tubeLabel, layoutLabel, date]);
 
   const result = generated.result;
   const toPlate = parsed.samples.filter((s) => !s.masterMix).length;
@@ -319,7 +327,7 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
     : [];
   const unplacedWells = placed.filter((p) => !p.well);
   const selectedOccupant = selectedWell ? atWell(selectedWell) : undefined;
-  const stem = `source_plate_${target}ngul`;
+  const stem = protocolStem(`source_plate_${target}ngul`, sources, date);
 
   return (
     <>
@@ -338,7 +346,8 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
                 A CSV with a header row also works, and may carry <code>rack</code>,{" "}
                 <code>tube</code> and <code>plate_well</code> columns.
               </p>
-              <CsvInput label="Tube list" value={text} onChange={setText} example={TUBE_LIST_EXAMPLE} />
+              <CsvInput label="Tube list" value={text} onChange={setText} example={TUBE_LIST_EXAMPLE}
+                fileName={tubeFile} onFileName={setTubeFile} />
               <p className="note">
                 {toPlate} to plate{inMix > 0 && `, ${inMix} in the master mix`}
               </p>
@@ -485,6 +494,8 @@ export function TubeNormalisationView({ deck, tab, author, slackUserId, notify }
                   }}
                   example={TUBE_PLATE_LAYOUT_EXAMPLE}
                   placeholder="well,name"
+                  fileName={layoutFile}
+                  onFileName={setLayoutFile}
                 />
               </div>
             </Panel>
